@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 
-async function scrapeHuggingface() {
+async function huggingfaceScraper() {
   let browser;
   try {
     browser = await puppeteer.launch();
@@ -75,7 +75,7 @@ async function scrapeHuggingface() {
     return top5;
   } catch (error) {
     console.error('Error scraping leaderboard:', error.message);
-    return [];
+    throw error;
   } finally {
     if (browser) {
       await browser.close();
@@ -83,16 +83,4 @@ async function scrapeHuggingface() {
   }
 }
 
-module.exports = scrapeHuggingface;
-
-// Run directly if not required as module
-if (require.main === module) {
-  scrapeHuggingface()
-    .then(top5 => {
-      console.log('\nTop 5 LLMs by Arena ELO Score:\n');
-      top5.forEach((model, i) => {
-        console.log(`${i+1}. ${model.model} - ${model.score.toFixed(1)}`);
-      });
-    })
-    .catch(console.error);
-}
+module.exports = huggingfaceScraper;

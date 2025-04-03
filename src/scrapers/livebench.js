@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 
-async function scrapeLivebench() {
+async function livebenchScraper() {
   let browser;
   try {
     browser = await puppeteer.launch();
@@ -45,7 +45,7 @@ async function scrapeLivebench() {
     return top5;
   } catch (error) {
     console.error('Error scraping LiveBench:', error.message);
-    return [];
+    throw error;
   } finally {
     if (browser) {
       await browser.close();
@@ -53,4 +53,4 @@ async function scrapeLivebench() {
   }
 }
 
-module.exports = scrapeLivebench;
+module.exports = livebenchScraper;
