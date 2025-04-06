@@ -36,3 +36,6 @@ Top 5 LLMs on Chatbot Arena Leaderboard:
 │    3    │ 'Llama 2 70B'                │ '1100'  │
 │    4    │ 'Claude Instant'             │ '1050'  │
 └─────────┴──────────────────────────────┴─────────┘
+
+# Future Direction
+Could use mcp-browser-use mcp to make the scrapers more resilient and flexible, and eliminate code-based scrapers altogether.

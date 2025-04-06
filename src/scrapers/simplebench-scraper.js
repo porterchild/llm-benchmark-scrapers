@@ -31,10 +31,17 @@ async function simplebenchScraper() {
       const model = $(element).find('td:nth-child(2)').text().trim();
       const score = parseFloat($(element).find('td:nth-child(3)').text().trim().replace('%', ''));
 
-      leaderboardData.push({ model, score });
+      if (model !== 'Human Baseline*') {
+        leaderboardData.push({ model, score });
+      }
     });
 
-    return leaderboardData;
+    // Sort by score (descending) and take top 5
+    const top5 = leaderboardData
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+
+    return top5;
   } catch (error) {
     console.error('Error fetching SimpleBench page:', error.message);
     throw error;
