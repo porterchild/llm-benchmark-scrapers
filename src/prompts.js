@@ -19,19 +19,22 @@ ${currentScores}
 ---
 
 Analyze the changes between the previous and new (current) scores. Generate a concise summary highlighting any movements (e.g., new models entering the top ranks, score changes, rank shifts). It should take the form of a short, friendly social media post.
+For any leaderboard that has any changes, reproduce ALL new standings for that leaderboard. If there are no previous results for a given leaderboard, do the same. If there are no prevous results for any leaderboards (which will happen on the first post), reproduce ALL new standings in the post.
+If there are no changes detected between the previous and current scores for a given leaderboard, skip it.
 
 **Formatting Requirements:**
-For each leaderboard section (e.g., "Chatbot Arena Leaderboard", "LiveBench Leaderboard") that has *any* change mentioned in your summary, include a hashtag derived from its name (e.g., #ChatbotArena, #LiveBench). Also reproduce the new standings for that leaderboard.
-For each *specific model name* mentioned as having changed rank or score in your summary, include a hashtag for that model (e.g., #Gemini2_5Pro, #Claude3_7Sonnet). Use underscores instead of spaces or special characters in model name hashtags.
+For each leaderboard section (e.g., "Chatbot Arena Leaderboard", "LiveBench Leaderboard") that has *any* change mentioned in your summary, include a hashtag derived from its name (e.g., #ChatbotArena, #LiveBench). 
+For each *specific model name* mentioned as having changed rank or score in your summary, include a hashtag for that model (e.g., #GeminiPro for Gemini-2.5-Pro-Exp-03-25, #ClaudeSonnet for Claude 3.7 Sonnet). Use underscores instead of spaces or special characters in model name hashtags.
+
 After this, include a funny/snarky AI progress-themed comment like "May you prosper through the singularity", or "May the future bring you many robotic e-girls", or funny obvious misquotes like "Never underestimate exponential AI improvement - Abraham Lincoln". Make up your own. 
-If there are no changes detected between the previous and current scores for a given leaderboard, skip it. If this is the first run (no previous scores provided), provide a summary of the current scores, followed by the #ai and #LLM hashtags.
+
 Include the hashtags #ai and #LLM at the very end of the post.
 
-For example (note, most leaderboards are ignored because they didn't have changes on this day):
+Here is an example (note, most leaderboards are ignored because they didn't have changes on this round):
 
 🌐 LLM Leaderboard Update 🌐  
 
-#SimpleBench: #Claude3_5Sonnet ninja-rolls into 5th place (41.4%), booting #qwq-32b into the existential void.  
+#SimpleBench: #ClaudeSonnet ninja-rolls into 5th place (41.4%), booting #qwq into the existential void.  
 
 New Results-
 === SimpleBench Leaderboard ===
@@ -44,6 +47,11 @@ New Results-
 "History is written by the models with the best validation scores." — A slightly confused Thucydides  
 
 #ai #LLM  
+
+
+End of example.
+
+Don't include any commentary, just respond with the post alone.
 `;
 }
 

@@ -7,9 +7,12 @@ const simplebenchScraper = require('./src/scrapers/simplebench-scraper');
 const swebenchScraper = require('./src/scrapers/swebench-scraper');
 const OpenRouterClient = require('./src/openrouter');
 const { getComparisonPrompt } = require('./src/prompts'); // Import the prompt generator
+const { publishToNostr } = require('./src/nostr'); // Import the Nostr publishing function
 
 const stateFilePath = path.join(__dirname, 'yesterdayScores.txt');
 const openRouter = new OpenRouterClient(process.env.OPENROUTER_API_KEY);
+const nostrSecretKeyNsec = process.env.NOSTR_BOT_NSEC; // Use NOSTR_BOT_NSEC
+const actuallyPostIt = process.env.ACTUALLY_POST_IT === 'true'; // Check the debug flag
 
 function formatResultsForStorage(results) {
   // Simple string formatting for storage and comparison
@@ -78,24 +81,38 @@ async function runAllScrapers() {
 
 
     // 3. Compare results and generate post using OpenRouter
-    if (!openRouter.apiKey) {
-        console.warn("OPENROUTER_API_KEY not set. Skipping comparison and Nostr post generation.");
+    if (!openRouter.apiKey || !nostrSecretKeyNsec) {
+        let missingKeys = [];
+        if (!openRouter.apiKey) missingKeys.push("OPENROUTER_API_KEY");
+        if (!nostrSecretKeyNsec) missingKeys.push("NOSTR_BOT_NSEC"); // Corrected check
+        console.warn(`Missing environment variable(s): ${missingKeys.join(', ')}. Skipping comparison and Nostr post generation.`);
     } else if (currentScores === previousScores) {
         console.log("No changes detected since last run.");
     } else {
         console.log("Changes detected or first run. Generating summary post...");
+        let postContent = '';
         try {
             const prompt = getComparisonPrompt(previousScores, currentScores);
-            const postContent = await openRouter.runPrompt(prompt); 
+            postContent = await openRouter.runPrompt(prompt);
             console.log("\n--- Generated Nostr Post ---");
             console.log(postContent);
             console.log("--------------------------\n");
-
-            // 4. Placeholder for publishing to Nostr
-            console.log(`>>> Placeholder: Publish the following content to Nostr <<<`);
-
         } catch (error) {
-            console.error("Failed to generate or publish post:", error);
+            console.error("Failed to generate summary post with OpenRouter:", error);
+            // Optionally decide if you want to proceed without a post or exit
+        }
+
+        // 4. Publish to Nostr if post content was generated and flag is set
+        if (postContent) {
+            if (actuallyPostIt) {
+                await publishToNostr(postContent, nostrSecretKeyNsec);
+            } else {
+                console.log("ACTUALLY_POST_IT flag is not 'true'. Skipping Nostr publish.");
+                // Log the content that would have been posted for debugging
+                console.log("\n--- Content that would be posted to Nostr ---");
+                console.log(postContent);
+                console.log("---------------------------------------------\n");
+            }
         }
     }
 
