@@ -1,6 +1,6 @@
-# LLM Benchmark Scraper
+# LLM Benchmark Nostr Bot
 
-A simple scraper that extracts the top 5 LLMs from the Hugging Face Chatbot Arena Leaderboard.
+This project runs daily scrapers to monitor various LLM benchmark leaderboards (like Hugging Face Chatbot Arena, LiveBench, SimpleBench, SWebench). It compares the latest results with the previous day's data stored in `yesterdayScores.txt`. If any changes are detected, it generates a summary of the changes using an LLM via OpenRouter and (placeholder) publishes the update as a Nostr note.
 
 ## Installation
 
