@@ -5,11 +5,14 @@ const huggingfaceScraper = require('./src/scrapers/huggingface');
 const livebenchScraper = require('./src/scrapers/livebench');
 const simplebenchScraper = require('./src/scrapers/simplebench-scraper');
 const swebenchScraper = require('./src/scrapers/swebench-scraper');
+const aiderScraper = require('./src/scrapers/aider-scraper'); // Import the new scraper
 const OpenRouterClient = require('./src/openrouter');
 const { getComparisonPrompt } = require('./src/prompts'); // Import the prompt generator
 const { publishToNostr } = require('./src/nostr'); // Import the Nostr publishing function
 
 const stateFilePath = path.join(__dirname, 'yesterdayScores.txt');
+const SCRAPER_TIMEOUT_MS = 60000; // 60 seconds timeout for each scraper
+
 const openRouter = new OpenRouterClient(process.env.OPENROUTER_API_KEY);
 const nostrSecretKeyNsec = process.env.NOSTR_BOT_NSEC; // Use NOSTR_BOT_NSEC
 const actuallyPostIt = process.env.ACTUALLY_POST_IT === 'true'; // Check the debug flag
@@ -23,11 +26,12 @@ function formatResultsForStorage(results) {
       let score = model.score;
       // Attempt to format score consistently, handling different types
       if (typeof score === 'number') {
-         if (key === 'SimpleBench Leaderboard') {
+         // Handle percentage formatting for SimpleBench and Aider
+         if (key === 'SimpleBench Leaderboard' || key === 'Aider Polyglot Leaderboard') {
              score = score.toFixed(1) + '%';
-         } else if (key === 'LiveBench Leaderboard' || key === 'SWebench Leaderboard') {
+         } else if (key === 'LiveBench Leaderboard' || key === 'SWE-Bench Verified Leaderboard') { // Corrected SWE key
              score = score.toFixed(2);
-         } else {
+         } else { // Default/HuggingFace
              score = score.toFixed(1); // Default/HuggingFace
          }
       }
@@ -38,10 +42,25 @@ function formatResultsForStorage(results) {
   return output.trim();
 }
 
+// Helper function to add a timeout to a promise
+function withTimeout(promise, ms, scraperName) {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${scraperName} timed out after ${ms / 1000} seconds`));
+    }, ms);
+  });
+
+  return Promise.race([
+    promise.finally(() => clearTimeout(timeoutId)), // Clear timeout if original promise settles
+    timeoutPromise
+  ]);
+}
+
 
 async function runAllScrapers() {
   try {
-    console.log('Running all benchmark scrapers...\n');
+    console.log(`Running all benchmark scrapers (timeout: ${SCRAPER_TIMEOUT_MS / 1000}s each)...\n`);
 
     // 1. Read previous scores
     let previousScores = '';
@@ -56,20 +75,30 @@ async function runAllScrapers() {
         // Decide if we should proceed or exit
       }
     }
-    
-    // 2. Run scrapers
-    const [hfResults, lbResults, sbResults, swResults] = await Promise.all([
-      huggingfaceScraper().catch(e => { console.error("HF Scraper failed:", e); return []; }),
-      livebenchScraper().catch(e => { console.error("LiveBench Scraper failed:", e); return []; }),
-      simplebenchScraper().catch(e => { console.error("SimpleBench Scraper failed:", e); return []; }),
-      swebenchScraper().catch(e => { console.error("SWebench Scraper failed:", e); return []; })
-    ]);
+
+    // 2. Run scrapers with individual timeouts
+    const scraperPromises = [
+      withTimeout(huggingfaceScraper(), SCRAPER_TIMEOUT_MS, 'HuggingFace')
+        .catch(e => { console.error("HF Scraper failed:", e.message || e); return []; }),
+      withTimeout(livebenchScraper(), SCRAPER_TIMEOUT_MS, 'LiveBench')
+        .catch(e => { console.error("LiveBench Scraper failed:", e.message || e); return []; }),
+      withTimeout(simplebenchScraper(), SCRAPER_TIMEOUT_MS, 'SimpleBench')
+        .catch(e => { console.error("SimpleBench Scraper failed:", e.message || e); return []; }),
+      withTimeout(swebenchScraper(), SCRAPER_TIMEOUT_MS, 'SWebench')
+        .catch(e => { console.error("SWebench Scraper failed:", e.message || e); return []; }),
+      withTimeout(aiderScraper(), SCRAPER_TIMEOUT_MS, 'Aider') // Add the Aider scraper call
+        .catch(e => { console.error("Aider Scraper failed:", e.message || e); return []; })
+    ];
+
+    // Update destructuring to include aiderResults
+    const [hfResults, lbResults, sbResults, swResults, aiderResults] = await Promise.all(scraperPromises);
 
     const currentResults = {
         'Chatbot Arena Leaderboard': hfResults,
         'LiveBench Leaderboard': lbResults,
         'SimpleBench Leaderboard': sbResults,
-        'SWE-Bench Verified Leaderboard': swResults
+        'SWE-Bench Verified Leaderboard': swResults,
+        'Aider Polyglot Leaderboard': aiderResults
     };
 
     const currentScores = formatResultsForStorage(currentResults);
