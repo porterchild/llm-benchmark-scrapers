@@ -1,14 +1,13 @@
 require('dotenv').config(); // Load environment variables from .env file
 const fs = require('fs').promises;
 const path = require('path');
-const huggingfaceScraper = require('./src/scrapers/huggingface');
 const livebenchScraper = require('./src/scrapers/livebench');
 const simplebenchScraper = require('./src/scrapers/simplebench-scraper');
 const swebenchScraper = require('./src/scrapers/swebench-scraper');
-const aiderScraper = require('./src/scrapers/aider-scraper'); // Import the new scraper
+const aiderScraper = require('./src/scrapers/aider-scraper');
 const OpenRouterClient = require('./src/openrouter');
-const { getComparisonPrompt } = require('./src/prompts'); // Import the prompt generator
-const { publishToNostr } = require('./src/nostr'); // Import the Nostr publishing function
+const { getComparisonPrompt } = require('./src/prompts');
+const { publishToNostr } = require('./src/nostr');
 
 const stateFilePath = path.join(__dirname, 'yesterdayScores.txt');
 const SCRAPER_TIMEOUT_MS = 60000; // 60 seconds timeout for each scraper
@@ -29,10 +28,10 @@ function formatResultsForStorage(results) {
          // Handle percentage formatting for SimpleBench and Aider
          if (key === 'SimpleBench Leaderboard' || key === 'Aider Polyglot Leaderboard') {
              score = score.toFixed(1) + '%';
-         } else if (key === 'LiveBench Leaderboard' || key === 'SWE-Bench Verified Leaderboard') { // Corrected SWE key
+         } else if (key === 'LiveBench Leaderboard' || key === 'SWE-Bench Verified Leaderboard') {
              score = score.toFixed(2);
-         } else { // Default/HuggingFace
-             score = score.toFixed(1); // Default/HuggingFace
+         } else { // Default for remaining leaderboards
+             score = score.toFixed(1);
          }
       }
       output += `${i + 1}. ${model.model} - ${score}\n`;
@@ -78,23 +77,20 @@ async function runAllScrapers() {
 
     // 2. Run scrapers with individual timeouts
     const scraperPromises = [
-      withTimeout(huggingfaceScraper(), SCRAPER_TIMEOUT_MS, 'HuggingFace')
-        .catch(e => { console.error("HF Scraper failed:", e.message || e); return []; }),
       withTimeout(livebenchScraper(), SCRAPER_TIMEOUT_MS, 'LiveBench')
         .catch(e => { console.error("LiveBench Scraper failed:", e.message || e); return []; }),
       withTimeout(simplebenchScraper(), SCRAPER_TIMEOUT_MS, 'SimpleBench')
         .catch(e => { console.error("SimpleBench Scraper failed:", e.message || e); return []; }),
       withTimeout(swebenchScraper(), SCRAPER_TIMEOUT_MS, 'SWebench')
         .catch(e => { console.error("SWebench Scraper failed:", e.message || e); return []; }),
-      withTimeout(aiderScraper(), SCRAPER_TIMEOUT_MS, 'Aider') // Add the Aider scraper call
+      withTimeout(aiderScraper(), SCRAPER_TIMEOUT_MS, 'Aider')
         .catch(e => { console.error("Aider Scraper failed:", e.message || e); return []; })
-    ];
+    ].filter(Boolean); // Filter out any explicitly undefined promises if needed (though catch handles failures)
 
-    // Update destructuring to include aiderResults
-    const [hfResults, lbResults, sbResults, swResults, aiderResults] = await Promise.all(scraperPromises);
+    const allResults = await Promise.all(scraperPromises);
+    const [lbResults, sbResults, swResults, aiderResults] = allResults; 
 
     const currentResults = {
-        'Chatbot Arena Leaderboard': hfResults,
         'LiveBench Leaderboard': lbResults,
         'SimpleBench Leaderboard': sbResults,
         'SWE-Bench Verified Leaderboard': swResults,

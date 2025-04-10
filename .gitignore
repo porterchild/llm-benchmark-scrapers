@@ -1,4 +1,4 @@
 node_modules/
 .env
-yesterdayScores.txt
+yesterdayScores*
 cron.log
