@@ -4,7 +4,8 @@ const cheerio = require('cheerio');
 async function simplebenchScraper() {
   let browser;
   try {
-    browser = await puppeteer.launch();
+    // Add --no-sandbox flag for cron compatibility
+    browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
     
     console.log('Navigating to SimpleBench page...');

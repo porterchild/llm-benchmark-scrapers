@@ -46,7 +46,7 @@ New Results-
 
 "History is written by the models with the best validation scores." — A slightly confused Thucydides  
 
-#ai #LLM  
+#ai #LLM #SimpleBench
 
 
 End of example.

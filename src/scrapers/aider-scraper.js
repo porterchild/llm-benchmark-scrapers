@@ -6,7 +6,8 @@ async function aiderScraper() {
   console.log(`Navigating to Aider Leaderboard page: ${url}`);
 
   try {
-    browser = await puppeteer.launch();
+    // Add --no-sandbox flag for cron compatibility
+    browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
 
     await page.goto(url, {
