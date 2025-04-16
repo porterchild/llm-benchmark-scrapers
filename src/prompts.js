@@ -21,6 +21,7 @@ ${currentScores}
 Analyze the changes between the previous and new (current) scores. Generate a concise summary highlighting any movements (e.g., new models entering the top ranks, score changes, rank shifts). It should take the form of a short, friendly social media post.
 For any leaderboard that has any changes, reproduce ALL new standings for that leaderboard. If there are no previous results for a given leaderboard, do the same. If there are no prevous results for any leaderboards (which will happen on the first post), reproduce ALL new standings in the post.
 If there are no changes detected between the previous and current scores for a given leaderboard, skip it.
+If the new (current) results are empty for a leaderboard, skip that leaderboard.
 
 **Formatting Requirements:**
 For each leaderboard section (e.g., "Chatbot Arena Leaderboard", "LiveBench Leaderboard") that has *any* change mentioned in your summary, include a hashtag derived from its name (e.g., #ChatbotArena, #LiveBench). 

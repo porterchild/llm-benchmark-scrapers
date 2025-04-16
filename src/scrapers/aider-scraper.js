@@ -15,39 +15,53 @@ async function aiderScraper() {
       timeout: 60000 // 60 seconds navigation timeout
     });
 
-    console.log('Waiting for Aider leaderboard table to load...');
-    // Target the first table within the main content area
-    await page.waitForSelector('main table', { timeout: 30000 }); // 30 seconds wait for table
-
     console.log('Extracting Aider leaderboard data...');
     const allModels = await page.evaluate(() => {
-      // Select the first table within the main content area
-      const table = document.querySelector('main table');
-      if (!table) return [];
+      const models = [];
+      try {
+        // Find the main leaderboard table (assuming only one relevant table)
+        const table = document.querySelector('table'); // More robust: find table containing known model names if needed
+        if (!table) return []; // No table found
 
-      const rows = Array.from(table.querySelectorAll('tbody tr'));
-      return rows.map(row => {
-        const cols = row.querySelectorAll('td');
-        if (cols.length < 2) return null; // Need at least Model and Score columns
+        let rows = Array.from(table.querySelectorAll('tbody > tr'));
+        if (rows.length === 0) {
+          const allRows = Array.from(table.querySelectorAll(':scope > tr, :scope > thead > tr, :scope > tbody > tr'));
+          rows = (allRows.length > 0 && allRows[0].querySelector('th')) ? allRows.slice(1) : allRows;
+        }
 
-        const modelElement = cols[0]; // First column for model name
-        const scoreElement = cols[1]; // Second column for score
+        rows.forEach((row) => {
+          if (row.classList.contains('details-row')) return; // Skip details rows
 
-        if (!modelElement || !scoreElement) return null;
+          const cells = Array.from(row.querySelectorAll('td'));
+          if (cells.length >= 3) { // Check for at least 3 cells
+            const modelNameCell = cells[1]; // Model name is in the second cell
+            const scoreCell = cells[2];     // Score is in the third cell
 
-        const model = modelElement.textContent.trim();
-        // Extract percentage, remove '%', and convert to float
-        const scoreText = scoreElement.textContent.trim().replace('%', '');
-        const score = parseFloat(scoreText);
+            const modelNameSpan = modelNameCell.querySelector('span');
+            const modelName = (modelNameSpan ? modelNameSpan.textContent.trim() : modelNameCell.textContent.trim());
 
-        if (!model || isNaN(score)) return null; // Skip if model name is empty or score is not a number
+            const scoreSpan = scoreCell.querySelector('span');
+            const scoreText = scoreSpan ? scoreSpan.textContent.trim() : '';
 
-        return {
-          model: model,
-          score: score // Store score as a number
-        };
-      }).filter(Boolean); // Remove any null entries
+            if (modelName && scoreText.includes('%')) {
+               const score = parseFloat(scoreText.replace('%', ''));
+               if (!isNaN(score)) {
+                  if (!models.some(m => m.model === modelName && m.score === score)) {
+                     models.push({ model: modelName, score: score });
+                  }
+                }
+              }
+            }
+          });
+        // End of rows.forEach
+        return models; // Return the populated models array
+      } catch (e) {
+        // Log error within evaluate if needed, but primarily handle outside
+        console.error('Error during page evaluation:', e.message);
+        return []; // Return empty array on error
+      }
     });
+    // Removed the extra logging related to evaluationResult
 
     if (allModels.length === 0) {
       throw new Error('No valid rows found in Aider leaderboard table');
