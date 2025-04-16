@@ -37,12 +37,12 @@ async function simplebenchScraper() {
       }
     });
 
-    // Sort by score (descending) and take top 5
-    const top5 = leaderboardData
+    // Sort by score (descending) and take top 10
+    const top10 = leaderboardData
       .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
+      .slice(0, 10);
 
-    return top5;
+    return top10;
   } catch (error) {
     console.error('Error fetching SimpleBench page:', error.message);
     throw error;

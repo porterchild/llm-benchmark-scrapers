@@ -35,15 +35,20 @@ Here is an example (note, most leaderboards are ignored because they didn't have
 
 🌐 LLM Leaderboard Update 🌐  
 
-#SimpleBench: #ClaudeSonnet ninja-rolls into 5th place (41.4%), booting #qwq into the existential void.  
+#SimpleBench: #Gemini ninja-rolls into 10th place (31.1%), booting #qwq into the existential void.  
 
 New Results-
 === SimpleBench Leaderboard ===
-1. Gemini 2.5 - 51.6%
+1. Gemini 2.5 Pro - 51.6%
 2. Claude 3.7 Sonnet (thinking) - 46.4%
 3. Claude 3.7 Sonnet - 44.9%
 4. o1-preview - 41.7%
 5. Claude 3.5 Sonnet 10-22 - 41.4%
+6. o1-2024-12-17 (high) - 40.1%
+7. o1-2024-12-17 (med) - 36.7%
+8. Grok 3 - 36.1%
+9. GPT-4.5 - 34.5%
+10. Gemini-exp-1206 - 31.1%
 
 "History is written by the models with the best validation scores." — A slightly confused Thucydides  
 

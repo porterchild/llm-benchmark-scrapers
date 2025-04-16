@@ -39,16 +39,16 @@ const allModels = await page.evaluate(() => {
   }).filter(Boolean);
 });
 
-    // Sort by score (descending) and take top 5
-    const top5 = allModels
+    // Sort by score (descending) and take top 10
+    const top10 = allModels
       .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
+      .slice(0, 10);
 
-    if (top5.length === 0) {
+    if (top10.length === 0) {
       throw new Error('No valid rows found in leaderboard');
     }
 
-    return top5;
+    return top10;
   } catch (error) {
     console.error('Error scraping SWebench:', error.message);
     throw error;

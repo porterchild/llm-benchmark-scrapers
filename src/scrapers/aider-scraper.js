@@ -67,13 +67,13 @@ async function aiderScraper() {
       throw new Error('No valid rows found in Aider leaderboard table');
     }
 
-    // Sort by score (descending) and take top 5
-    const top5 = allModels
+    // Sort by score (descending) and take top 10
+    const top10 = allModels
       .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
+      .slice(0, 10);
 
-    console.log(`Successfully scraped ${top5.length} models from Aider Leaderboard.`);
-    return top5;
+    console.log(`Successfully scraped ${top10.length} models from Aider Leaderboard.`);
+    return top10;
 
   } catch (error) {
     console.error(`Error scraping Aider Leaderboard (${url}):`, error.message);
