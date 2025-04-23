@@ -5,6 +5,7 @@ const livebenchScraper = require('./src/scrapers/livebench');
 const simplebenchScraper = require('./src/scrapers/simplebench-scraper');
 const swebenchScraper = require('./src/scrapers/swebench-scraper');
 const aiderScraper = require('./src/scrapers/aider-scraper');
+const arcAgi2Scraper = require('./src/scrapers/arc-agi-2-scraper'); // Added ARC-AGI-2 scraper
 const OpenRouterClient = require('./src/openrouter');
 const { getComparisonPrompt } = require('./src/prompts');
 const { publishToNostr } = require('./src/nostr');
@@ -84,17 +85,20 @@ async function runAllScrapers() {
       withTimeout(swebenchScraper(), SCRAPER_TIMEOUT_MS, 'SWebench')
         .catch(e => { console.error("SWebench Scraper failed:", e.message || e); return []; }),
       withTimeout(aiderScraper(), SCRAPER_TIMEOUT_MS, 'Aider')
-        .catch(e => { console.error("Aider Scraper failed:", e.message || e); return []; })
+        .catch(e => { console.error("Aider Scraper failed:", e.message || e); return []; }),
+      withTimeout(arcAgi2Scraper(), SCRAPER_TIMEOUT_MS, 'ARC-AGI-2')
+        .catch(e => { console.error("ARC-AGI-2 Scraper failed:", e.message || e); return []; })
     ].filter(Boolean); // Filter out any explicitly undefined promises if needed (though catch handles failures)
 
     const allResults = await Promise.all(scraperPromises);
-    const [lbResults, sbResults, swResults, aiderResults] = allResults; 
+    const [lbResults, sbResults, swResults, aiderResults, arcResults] = allResults;
 
     const currentResults = {
         'LiveBench Leaderboard': lbResults,
         'SimpleBench Leaderboard': sbResults,
         'SWE-Bench Verified Leaderboard': swResults,
-        'Aider Polyglot Leaderboard': aiderResults
+        'Aider Polyglot Leaderboard': aiderResults,
+        'ARC-AGI-2 Leaderboard': arcResults
     };
 
     const currentScores = formatResultsForStorage(currentResults);
