@@ -1,105 +1,112 @@
 const axios = require('axios');
-const csvParser = require('csv-parser'); // Import the module directly
+const csvParser = require('csv-parser');
 const { Readable } = require('stream');
 
 const CSV_URL = 'https://arcprize.org/media/data/leaderboard.csv';
 
-async function arcAgi2Scraper() { // Renamed function
-  try {
-    console.log('Fetching ARC-AGI-2 leaderboard CSV...'); // Updated log message
-    const response = await axios.get(CSV_URL, { responseType: 'stream' });
+/**
+ * Fetches and parses the ARC Prize leaderboard CSV.
+ * @param {string} scoreColumnName - The name of the CSV column containing the score to use (e.g., 'v1_Semi_Private_Score', 'v2_Semi_Private_Score').
+ * @param {string} leaderboardName - A descriptive name for logging (e.g., 'ARC-AGI-1', 'ARC-AGI-2').
+ * @returns {Promise<Array<{model: string, score: number}>>} - A promise that resolves to an array of model objects with raw scores.
+ */
+async function fetchAndParseArcCsv(scoreColumnName, leaderboardName) {
+  console.log(`Fetching ${leaderboardName} leaderboard CSV...`);
+  const response = await axios.get(CSV_URL, { responseType: 'stream' });
 
-    console.log('Parsing CSV data...');
+  console.log(`Parsing CSV data for ${leaderboardName}...`);
 
-    // Use Promise to handle stream events, piping and attaching listeners inside
-    const records = await new Promise((resolve, reject) => {
-      const collectedRecords = [];
+  return new Promise((resolve, reject) => {
+    const collectedRecords = [];
+    const parser = response.data.pipe(csvParser({
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+    }));
 
-      const parser = response.data.pipe(csvParser({ // Define parser inside promise
-        columns: true, // Use the first row as header
-        skip_empty_lines: true,
-        trim: true,
-      }));
+    parser.on('data', (record) => {
+      const displayName = record.Display_Name;
+      const shouldDisplay = record.display === 'true';
+      const scoreString = record[scoreColumnName] || ''; // Use the dynamic score column name
+      const score = parseFloat(scoreString);
+      const hasValidScore = !isNaN(score);
+      const modelsToExclude = ['Human Panel', 'Stem Grad', 'Avg. Mturker']; // Add new models to exclude
 
-      parser.on('data', (record) => {
-        // Filter out entries that shouldn't be displayed or lack a valid score
-        const displayName = record.Display_Name; // Get name for filtering
-        const shouldDisplay = record.display === 'true';
-        // Use v2_Semi_Private_Score as the target score (ARC-AGI-2)
-        const scoreString = record.v2_Semi_Private_Score || '';
-        const score = parseFloat(scoreString);
-        const hasValidScore = !isNaN(score);
+      // Filter out excluded models early and check display status/valid score
+      if (!modelsToExclude.includes(displayName) && shouldDisplay && hasValidScore) {
+        // Normalize score: If score < 1.01, assume it's a decimal ratio, multiply by 100.
+        // Otherwise, assume it's already a percentage value.
+        const normalizedScore = score < 1.01 ? score * 100 : score;
 
-        if (shouldDisplay && hasValidScore) {
-          collectedRecords.push({
-            model: displayName,
-            // Format score as percentage string with one decimal place
-            score: `${(score * 100).toFixed(1)}%`,
-          });
-        }
-      });
+        collectedRecords.push({
+          model: displayName,
+          score: normalizedScore, // Store the NORMALIZED score (0-100 scale)
+        });
+      }
+    });
 
-      parser.on('end', () => {
-        console.log(`CSV parsing finished. Found ${collectedRecords.length} valid entries.`);
-        if (collectedRecords.length === 0) {
-          // Reject if no valid records found after successful parsing
-          return reject(new Error('No valid entries found in ARC Prize leaderboard CSV after parsing.'));
-        }
-        // Resolve with the collected records on successful end
+    parser.on('end', () => {
+      console.log(`CSV parsing finished for ${leaderboardName}. Found ${collectedRecords.length} valid entries (excluding Human Panel).`);
+      if (collectedRecords.length === 0) {
+        reject(new Error(`No valid entries found in ${leaderboardName} leaderboard CSV after parsing.`));
+      } else {
         resolve(collectedRecords);
+      }
+    });
+
+    parser.on('error', (err) => reject(new Error(`CSV parsing error for ${leaderboardName}: ${err.message}`)));
+    response.data.on('error', (err) => reject(new Error(`HTTP stream error for ${leaderboardName}: ${err.message}`)));
+  });
+}
+
+/**
+ * Scrapes the ARC-AGI-2 leaderboard data.
+ * @returns {Promise<Array<{model: string, score: string}>>} - A promise that resolves to the top 10 models formatted for display.
+ */
+async function arcAgi2Scraper() {
+  try {
+    const records = await fetchAndParseArcCsv('v2_Semi_Private_Score', 'ARC-AGI-2');
+
+    // Sort by score (descending) and take top 10
+    const top10 = records
+      .sort((a, b) => b.score - a.score) // Sort by raw score number
+      .slice(0, 10)
+      .map(record => {
+        // Score is already normalized (0-100 scale) by fetchAndParseArcCsv
+        // Just format it to one decimal place and add '%'
+        return {
+          model: record.model,
+          score: `${record.score.toFixed(1)}%`,
+        };
       });
 
-      parser.on('error', (err) => {
-        // Reject on parser error
-        reject(new Error(`CSV parsing error: ${err.message}`));
-      });
-
-      // Still handle potential errors on the response stream itself
-      response.data.on('error', (err) => {
-         // Reject on underlying stream error
-         reject(new Error(`HTTP stream error: ${err.message}`));
-      });
-    }); // End of new Promise executor
-
-    // Filter out "Human Panel" AFTER collecting all valid records
-    const filteredRecords = records.filter(record => record.model !== 'Human Panel');
-
-    // Sort by score (descending, parsing the percentage string back to float) and take top 10 of the filtered list
-    const top10 = filteredRecords
-      .sort((a, b) => parseFloat(b.score.replace('%','')) - parseFloat(a.score.replace('%','')))
-      .slice(0, 10);
-
-    console.log(`Successfully scraped ${top10.length} entries from ARC Prize (excluding Human Panel).`);
+    console.log(`Successfully scraped ${top10.length} entries from ARC-AGI-2 (excluding Human Panel, Stem Grad, Avg. Mturker).`); // Updated log
     return top10;
 
   } catch (error) {
-    console.error('Error scraping ARC Prize leaderboard:', error.message);
-    // Check if it's an axios error for more details
-    if (error.response) {
-      console.error('Status:', error.response.status);
-      console.error('Headers:', error.response.headers);
-    } else if (error.request) {
-      console.error('Request Error:', error.request);
-    }
-    throw error; // Re-throw the error to be caught by the main script
+    console.error('Error scraping ARC-AGI-2 leaderboard:', error.message);
+    // Error details logging moved inside fetchAndParseArcCsv or handled by caller
+    throw error; // Re-throw the error to be caught by the main script (index.js)
   }
 }
 
-module.exports = arcAgi2Scraper; // Export renamed function
+// Export the specific scraper function and the common utility
+module.exports = arcAgi2Scraper;
+module.exports.fetchAndParseArcCsv = fetchAndParseArcCsv; // Export for reuse
 
 // Allow running the scraper directly for testing
 if (require.main === module) {
   (async () => {
-    console.log("Running ARC-AGI-2 scraper directly..."); // Updated log message
+    console.log("Running ARC-AGI-2 scraper directly...");
     try {
-      const results = await arcAgi2Scraper(); // Call renamed function
-      console.log("\n--- ARC-AGI-2 Scraper Results (Top 10) ---"); // Updated title
+      const results = await arcAgi2Scraper();
+      console.log("\n--- ARC-AGI-2 Scraper Results (Top 10) ---");
       results.forEach((item, index) => {
-        console.log(`${index + 1}. ${item.model} - ${item.score}`); // Keep simple format
+        console.log(`${index + 1}. ${item.model} - ${item.score}`);
       });
-      console.log("--------------------------------------------------\n"); // Adjusted separator
+      console.log("--------------------------------------------------\n");
     } catch (error) {
-      console.error("Failed to run ARC-AGI-2 scraper directly:", error); // Updated error message
+      console.error("Failed to run ARC-AGI-2 scraper directly:", error);
     }
   })();
 }

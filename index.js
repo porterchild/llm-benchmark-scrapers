@@ -5,7 +5,8 @@ const livebenchScraper = require('./src/scrapers/livebench');
 const simplebenchScraper = require('./src/scrapers/simplebench-scraper');
 const swebenchScraper = require('./src/scrapers/swebench-scraper');
 const aiderScraper = require('./src/scrapers/aider-scraper');
-const arcAgi2Scraper = require('./src/scrapers/arc-agi-2-scraper'); // Added ARC-AGI-2 scraper
+const arcAgi1Scraper = require('./src/scrapers/arc-agi-1-scraper');
+const arcAgi2Scraper = require('./src/scrapers/arc-agi-2-scraper');
 const OpenRouterClient = require('./src/openrouter');
 const { getComparisonPrompt } = require('./src/prompts');
 const { publishToNostr } = require('./src/nostr');
@@ -26,13 +27,13 @@ function formatResultsForStorage(results) {
       let score = model.score;
       // Attempt to format score consistently, handling different types
       if (typeof score === 'number') {
-         // Handle percentage formatting for SimpleBench and Aider
-         if (key === 'SimpleBench Leaderboard' || key === 'Aider Polyglot Leaderboard') {
+         // Handle percentage formatting for SimpleBench, Aider, and ARC-AGI
+         if (key === 'SimpleBench Leaderboard' || key === 'Aider Polyglot Leaderboard' || key === 'ARC-AGI-1 Leaderboard' || key === 'ARC-AGI-2 Leaderboard') {
              score = score.toFixed(1) + '%';
          } else if (key === 'LiveBench Leaderboard' || key === 'SWE-Bench Verified Leaderboard') {
              score = score.toFixed(2);
-         } else { // Default for remaining leaderboards
-             score = score.toFixed(1);
+         } else { // Default for remaining leaderboards (if any added later)
+             score = score.toFixed(1); // Keep a default, though currently covered
          }
       }
       output += `${i + 1}. ${model.model} - ${score}\n`;
@@ -86,19 +87,22 @@ async function runAllScrapers() {
         .catch(e => { console.error("SWebench Scraper failed:", e.message || e); return []; }),
       withTimeout(aiderScraper(), SCRAPER_TIMEOUT_MS, 'Aider')
         .catch(e => { console.error("Aider Scraper failed:", e.message || e); return []; }),
+      withTimeout(arcAgi1Scraper(), SCRAPER_TIMEOUT_MS, 'ARC-AGI-1')
+        .catch(e => { console.error("ARC-AGI-1 Scraper failed:", e.message || e); return []; }),
       withTimeout(arcAgi2Scraper(), SCRAPER_TIMEOUT_MS, 'ARC-AGI-2')
         .catch(e => { console.error("ARC-AGI-2 Scraper failed:", e.message || e); return []; })
     ].filter(Boolean); // Filter out any explicitly undefined promises if needed (though catch handles failures)
 
     const allResults = await Promise.all(scraperPromises);
-    const [lbResults, sbResults, swResults, aiderResults, arcResults] = allResults;
+    const [lbResults, sbResults, swResults, aiderResults, arc1Results, arc2Results] = allResults;
 
     const currentResults = {
         'LiveBench Leaderboard': lbResults,
         'SimpleBench Leaderboard': sbResults,
         'SWE-Bench Verified Leaderboard': swResults,
         'Aider Polyglot Leaderboard': aiderResults,
-        'ARC-AGI-2 Leaderboard': arcResults
+        'ARC-AGI-1 Leaderboard': arc1Results,
+        'ARC-AGI-2 Leaderboard': arc2Results
     };
 
     const currentScores = formatResultsForStorage(currentResults);
@@ -113,7 +117,7 @@ async function runAllScrapers() {
     if (!openRouter.apiKey || !nostrSecretKeyNsec) {
         let missingKeys = [];
         if (!openRouter.apiKey) missingKeys.push("OPENROUTER_API_KEY");
-        if (!nostrSecretKeyNsec) missingKeys.push("NOSTR_BOT_NSEC"); // Corrected check
+        if (!nostrSecretKeyNsec) missingKeys.push("NOSTR_BOT_NSEC");
         console.warn(`Missing environment variable(s): ${missingKeys.join(', ')}. Skipping comparison and Nostr post generation.`);
     } else if (currentScores === previousScores) {
         console.log("No changes detected since last run.");
