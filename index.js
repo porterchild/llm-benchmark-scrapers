@@ -7,6 +7,7 @@ const swebenchScraper = require('./src/scrapers/swebench-scraper');
 const aiderScraper = require('./src/scrapers/aider-scraper');
 const arcAgi1Scraper = require('./src/scrapers/arc-agi-1-scraper');
 const arcAgi2Scraper = require('./src/scrapers/arc-agi-2-scraper');
+const livecodebenchScraper = require('./src/scrapers/livecodebench-scraper');
 const OpenRouterClient = require('./src/openrouter');
 const { getComparisonPrompt } = require('./src/prompts');
 const { publishToNostr } = require('./src/nostr');
@@ -30,10 +31,10 @@ function formatResultsForStorage(results) {
          // Handle percentage formatting for SimpleBench, Aider, and ARC-AGI
          if (key === 'SimpleBench Leaderboard' || key === 'Aider Polyglot Leaderboard' || key === 'ARC-AGI-1 Leaderboard' || key === 'ARC-AGI-2 Leaderboard') {
              score = score.toFixed(1) + '%';
-         } else if (key === 'LiveBench Leaderboard' || key === 'SWE-Bench Verified Leaderboard') {
+         } else if (key === 'LiveBench Leaderboard' || key === 'SWE-Bench Verified Leaderboard' || key === 'LiveCodeBench Leaderboard') {
              score = score.toFixed(2);
          } else { // Default for remaining leaderboards (if any added later)
-             score = score.toFixed(1); // Keep a default, though currently covered
+             score = score.toFixed(1);
          }
       }
       output += `${i + 1}. ${model.model} - ${score}\n`;
@@ -126,7 +127,9 @@ async function runAllScrapersAndMakePost() {
       withTimeout(arcAgi1Scraper(), SCRAPER_TIMEOUT_MS, 'ARC-AGI-1')
         .catch(e => { console.error("ARC-AGI-1 Scraper failed:", e.message || e); return []; }),
       withTimeout(arcAgi2Scraper(), SCRAPER_TIMEOUT_MS, 'ARC-AGI-2')
-        .catch(e => { console.error("ARC-AGI-2 Scraper failed:", e.message || e); return []; })
+        .catch(e => { console.error("ARC-AGI-2 Scraper failed:", e.message || e); return []; }),
+      withTimeout(livecodebenchScraper(), SCRAPER_TIMEOUT_MS, 'LiveCodeBench')
+        .catch(e => { console.error("LiveCodeBench Scraper failed:", e.message || e); return []; })
     ].filter(Boolean); // Filter out any explicitly undefined promises if needed (though catch handles failures)
 
     const allResults = await Promise.all(scraperPromises);
@@ -140,7 +143,7 @@ async function runAllScrapersAndMakePost() {
         return; // Exit the function early
     }
 
-    const [lbResults, sbResults, swResults, aiderResults, arc1Results, arc2Results] = allResults;
+    const [lbResults, sbResults, swResults, aiderResults, arc1Results, arc2Results, lcbResults] = allResults; 
 
     const currentResults = {
         'LiveBench Leaderboard': lbResults,
@@ -148,7 +151,8 @@ async function runAllScrapersAndMakePost() {
         'SWE-Bench Verified Leaderboard': swResults,
         'Aider Polyglot Leaderboard': aiderResults,
         'ARC-AGI-1 Leaderboard': arc1Results,
-        'ARC-AGI-2 Leaderboard': arc2Results
+        'ARC-AGI-2 Leaderboard': arc2Results,
+        'LiveCodeBench Leaderboard': lcbResults 
     };
 
     const currentScores = formatResultsForStorage(currentResults);
