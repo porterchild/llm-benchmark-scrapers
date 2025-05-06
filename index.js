@@ -59,9 +59,45 @@ function withTimeout(promise, ms, scraperName) {
 }
 
 
-async function runAllScrapers() {
+const http = require('http'); // Import http module for network check
+
+async function checkNetwork() {
+  return new Promise((resolve) => {
+    http.get('http://www.google.com', (res) => {
+      resolve(res.statusCode === 200);
+    }).on('error', () => {
+      resolve(false);
+    });
+  });
+}
+
+async function runAllScrapersAndMakePost() {
   try {
     console.log(`Running all benchmark scrapers (timeout: ${SCRAPER_TIMEOUT_MS / 1000}s each)...\n`);
+
+    // Network check with retries
+    const maxRetries = 20; // 10 minutes / 30 seconds = 20 retries
+    const retryIntervalMs = 30000; // 30 seconds
+    let retries = 0;
+    let networkUp = false;
+
+    while (!networkUp && retries < maxRetries) {
+      console.log(`Checking network connection (Attempt ${retries + 1}/${maxRetries})...`);
+      networkUp = await checkNetwork();
+      if (networkUp) {
+        console.log('Network is up. Proceeding with scrapers.');
+        break;
+      } else {
+        retries++;
+        if (retries < maxRetries) {
+          console.log(`Network down. Retrying in ${retryIntervalMs / 1000} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, retryIntervalMs));
+        } else {
+          console.error('Network remained down after multiple retries. Exiting.');
+          process.exit(1); // Exit if network is down after max retries
+        }
+      }
+    }
 
     // 1. Read previous scores
     let previousScores = '';
@@ -94,6 +130,16 @@ async function runAllScrapers() {
     ].filter(Boolean); // Filter out any explicitly undefined promises if needed (though catch handles failures)
 
     const allResults = await Promise.all(scraperPromises);
+
+    // Check if all scraper results are empty
+    const allScrapersEmpty = allResults.every(resultArray => resultArray.length === 0);
+
+    if (allScrapersEmpty) {
+        console.warn('All scrapers returned empty results. Skipping update of yesterdayScores.txt to preserve previous valid results.');
+        // Optionally, you might want to exit or skip further processing
+        return; // Exit the function early
+    }
+
     const [lbResults, sbResults, swResults, aiderResults, arc1Results, arc2Results] = allResults;
 
     const currentResults = {
@@ -150,6 +196,7 @@ async function runAllScrapers() {
     }
 
     // 5. Overwrite yesterdayScores.txt with new results
+    // The check for allScrapersEmpty above ensures we don't reach here if results were empty.
     try {
         await fs.writeFile(stateFilePath, currentScores, 'utf-8');
         console.log('Successfully updated yesterdayScores.txt');
@@ -163,4 +210,4 @@ async function runAllScrapers() {
   }
 }
 
-runAllScrapers().catch(console.error);
+runAllScrapersAndMakePost().catch(console.error);
