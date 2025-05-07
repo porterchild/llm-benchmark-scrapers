@@ -14,30 +14,35 @@ async function swebenchScraper() {
     });
 
     console.log('Waiting for leaderboard to load...');
-    await page.waitForSelector('table', { timeout: 30000 });
+    // Wait for the specific table for the "Verified" leaderboard
+    await page.waitForSelector('div#leaderboard-Verified table.data-table', { timeout: 30000 });
 
-const allModels = await page.evaluate(() => {
-  const rows = Array.from(document.querySelectorAll('table tbody tr'));
-  return rows.map(row => {
-    const cols = row.querySelectorAll('td');
-    if (cols.length < 2) return null;
-    
-    const modelElement = cols[0].querySelector('p.model-type');
-    const scoreElement = cols[1].querySelector('p.number');
-    
-    if (!modelElement || !scoreElement) return null;
-    
-    const model = modelElement.textContent.trim().replace(/[\n\s]+/g, ' ').replace(/^[^\w]+/, '');
-    const score = parseFloat(scoreElement.textContent.trim());
-    
-    if (isNaN(score)) return null;
-    
-    return {
-      model: model,
-      score: score
-    };
-  }).filter(Boolean);
-});
+    const allModels = await page.evaluate(() => {
+      // Select rows from the "Verified" leaderboard table
+      const rows = Array.from(document.querySelectorAll('div#leaderboard-Verified table.data-table tbody tr'));
+      return rows.map(row => {
+        const cols = row.querySelectorAll('td');
+        if (cols.length < 2) return null; // Ensure at least two columns (Model and Score)
+
+        // Model name is in the first column, within a span with class 'model-name'
+        const modelElement = cols[0].querySelector('span.model-name');
+        // Score is in the second column, within a span with class 'number'
+        const scoreElement = cols[1].querySelector('span.number');
+
+        if (!modelElement || !scoreElement) return null;
+
+        const model = modelElement.textContent.trim();
+        const scoreText = scoreElement.textContent.trim();
+        const score = parseFloat(scoreText);
+
+        if (isNaN(score)) return null;
+
+        return {
+          model: model,
+          score: score
+        };
+      }).filter(Boolean); // Filter out any null entries (e.g., if parsing failed for a row)
+    });
 
     // Sort by score (descending) and take top 10
     const top10 = allModels
@@ -60,3 +65,19 @@ const allModels = await page.evaluate(() => {
 }
 
 module.exports = swebenchScraper;
+
+// Add this block to make the script runnable directly
+if (require.main === module) {
+  (async () => {
+    try {
+      console.log('Running SWE-Bench scraper directly...');
+      const results = await swebenchScraper();
+      console.log('\n--- SWE-Bench Scraper Results ---');
+      console.log(JSON.stringify(results, null, 2));
+      console.log('-------------------------------\n');
+    } catch (error) {
+      console.error('Error running SWE-Bench scraper directly:', error);
+      process.exit(1); // Exit with error code if direct run fails
+    }
+  })();
+}
