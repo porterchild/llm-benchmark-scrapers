@@ -115,20 +115,21 @@ async function runAllScrapersAndMakePost() {
     }
 
     // 2. Run scrapers with individual timeouts
+    const numResults = 20; // Define the number of results to fetch
     const scraperPromises = [
-      withTimeout(livebenchScraper(), SCRAPER_TIMEOUT_MS, 'LiveBench')
+      withTimeout(livebenchScraper(numResults), SCRAPER_TIMEOUT_MS, 'LiveBench')
         .catch(e => { console.error("LiveBench Scraper failed:", e.message || e); return []; }),
-      withTimeout(simplebenchScraper(), SCRAPER_TIMEOUT_MS, 'SimpleBench')
+      withTimeout(simplebenchScraper(numResults), SCRAPER_TIMEOUT_MS, 'SimpleBench')
         .catch(e => { console.error("SimpleBench Scraper failed:", e.message || e); return []; }),
-      withTimeout(swebenchScraper(), SCRAPER_TIMEOUT_MS, 'SWebench')
+      withTimeout(swebenchScraper(numResults), SCRAPER_TIMEOUT_MS, 'SWebench')
         .catch(e => { console.error("SWebench Scraper failed:", e.message || e); return []; }),
-      withTimeout(aiderScraper(), SCRAPER_TIMEOUT_MS, 'Aider')
+      withTimeout(aiderScraper(numResults), SCRAPER_TIMEOUT_MS, 'Aider')
         .catch(e => { console.error("Aider Scraper failed:", e.message || e); return []; }),
-      withTimeout(arcAgi1Scraper(), SCRAPER_TIMEOUT_MS, 'ARC-AGI-1')
+      withTimeout(arcAgi1Scraper(numResults), SCRAPER_TIMEOUT_MS, 'ARC-AGI-1')
         .catch(e => { console.error("ARC-AGI-1 Scraper failed:", e.message || e); return []; }),
-      withTimeout(arcAgi2Scraper(), SCRAPER_TIMEOUT_MS, 'ARC-AGI-2')
+      withTimeout(arcAgi2Scraper(numResults), SCRAPER_TIMEOUT_MS, 'ARC-AGI-2')
         .catch(e => { console.error("ARC-AGI-2 Scraper failed:", e.message || e); return []; }),
-      withTimeout(livecodebenchScraper(), SCRAPER_TIMEOUT_MS, 'LiveCodeBench')
+      withTimeout(livecodebenchScraper(numResults), SCRAPER_TIMEOUT_MS, 'LiveCodeBench')
         .catch(e => { console.error("LiveCodeBench Scraper failed:", e.message || e); return []; })
     ].filter(Boolean); // Filter out any explicitly undefined promises if needed (though catch handles failures)
 

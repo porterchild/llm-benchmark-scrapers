@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 
-async function livebenchScraper() {
+async function livebenchScraper(count = 10) {
   let browser;
   try {
     // Add --no-sandbox flag for cron compatibility
@@ -34,16 +34,16 @@ async function livebenchScraper() {
       }).filter(Boolean);
     });
 
-    // Sort by score (descending) and take top 10
-    const top10 = allModels
+    // Sort by score (descending) and take top N
+    const topN = allModels
       .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
+      .slice(0, count);
 
-    if (top10.length === 0) {
+    if (topN.length === 0) {
       throw new Error('No valid rows found in leaderboard');
     }
 
-    return top10;
+    return topN;
   } catch (error) {
     console.error('Error scraping LiveBench:', error.message);
     throw error;

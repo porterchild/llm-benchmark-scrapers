@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 
-async function livecodebenchScraper() {
+async function livecodebenchScraper(count = 10) {
   let browser;
   try {
     // Add --no-sandbox flag for cron compatibility
@@ -63,17 +63,17 @@ async function livecodebenchScraper() {
       return models;
     }, agGridRowSelector); // Pass selector to page.evaluate
 
-    // Sort by score (descending) and take top 10
-    const top10 = allModels
+    // Sort by score (descending) and take top N
+    const topN = allModels
       .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
+      .slice(0, count);
 
-    if (top10.length === 0) {
+    if (topN.length === 0) {
       console.warn('No valid models found or parsed from LiveCodeBench AG Grid leaderboard. Returning empty array.');
       return [];
     }
-    console.log(`Successfully scraped ${top10.length} models.`);
-    return top10;
+    console.log(`Successfully scraped ${topN.length} models.`);
+    return topN;
   } catch (error) {
     console.error('Error scraping LiveCodeBench:', error.message);
     // To prevent one scraper failure from stopping all, return empty array on error.
@@ -91,8 +91,9 @@ module.exports = livecodebenchScraper;
 // To test this scraper individually:
 // node src/scrapers/livecodebench-scraper.js
 if (require.main === module) {
-  livecodebenchScraper().then(results => {
-    console.log("LiveCodeBench Scraper Results (Top 10):");
+  const numResults = process.argv[2] ? parseInt(process.argv[2], 10) : 10; // Allow passing count via CLI
+  livecodebenchScraper(numResults).then(results => {
+    console.log(`LiveCodeBench Scraper Results (Top ${numResults}):`);
     console.table(results);
   }).catch(error => {
     console.error("Failed to run LiveCodeBench scraper individually:", error);

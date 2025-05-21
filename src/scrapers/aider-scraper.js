@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 
-async function aiderScraper() {
+async function aiderScraper(count = 10) {
   let browser;
   const url = 'https://aider.chat/docs/leaderboards/';
   console.log(`Navigating to Aider Leaderboard page: ${url}`);
@@ -67,13 +67,13 @@ async function aiderScraper() {
       throw new Error('No valid rows found in Aider leaderboard table');
     }
 
-    // Sort by score (descending) and take top 10
-    const top10 = allModels
+    // Sort by score (descending) and take top N
+    const topN = allModels
       .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
+      .slice(0, count);
 
-    console.log(`Successfully scraped ${top10.length} models from Aider Leaderboard.`);
-    return top10;
+    console.log(`Successfully scraped ${topN.length} models from Aider Leaderboard.`);
+    return topN;
 
   } catch (error) {
     console.error(`Error scraping Aider Leaderboard (${url}):`, error.message);
@@ -93,8 +93,9 @@ module.exports = aiderScraper;
 if (require.main === module) {
   (async () => {
     try {
-      console.log('Running Aider scraper directly...');
-      const results = await aiderScraper();
+      const numResults = process.argv[2] ? parseInt(process.argv[2], 10) : 10; // Allow passing count via CLI for direct run
+      console.log(`Running Aider scraper directly (top ${numResults})...`);
+      const results = await aiderScraper(numResults);
       console.log('\n--- Aider Scraper Results ---');
       console.log(JSON.stringify(results, null, 2));
       console.log('---------------------------\n');

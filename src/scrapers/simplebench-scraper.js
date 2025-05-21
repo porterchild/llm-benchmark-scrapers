@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 
-async function simplebenchScraper() {
+async function simplebenchScraper(count = 10) {
   let browser;
   try {
     // Add --no-sandbox flag for cron compatibility
@@ -37,12 +37,12 @@ async function simplebenchScraper() {
       }
     });
 
-    // Sort by score (descending) and take top 10
-    const top10 = leaderboardData
+    // Sort by score (descending) and take top N
+    const topN = leaderboardData
       .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
+      .slice(0, count);
 
-    return top10;
+    return topN;
   } catch (error) {
     console.error('Error fetching SimpleBench page:', error.message);
     throw error;

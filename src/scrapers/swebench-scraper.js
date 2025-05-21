@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 
-async function swebenchScraper() {
+async function swebenchScraper(count = 10) {
   let browser;
   try {
     // Add --no-sandbox flag for cron compatibility
@@ -44,16 +44,16 @@ async function swebenchScraper() {
       }).filter(Boolean); // Filter out any null entries (e.g., if parsing failed for a row)
     });
 
-    // Sort by score (descending) and take top 10
-    const top10 = allModels
+    // Sort by score (descending) and take top N
+    const topN = allModels
       .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
+      .slice(0, count);
 
-    if (top10.length === 0) {
+    if (topN.length === 0) {
       throw new Error('No valid rows found in leaderboard');
     }
 
-    return top10;
+    return topN;
   } catch (error) {
     console.error('Error scraping SWebench:', error.message);
     throw error;
@@ -70,8 +70,9 @@ module.exports = swebenchScraper;
 if (require.main === module) {
   (async () => {
     try {
-      console.log('Running SWE-Bench scraper directly...');
-      const results = await swebenchScraper();
+      const numResults = process.argv[2] ? parseInt(process.argv[2], 10) : 10; // Allow passing count via CLI for direct run
+      console.log(`Running SWE-Bench scraper directly (top ${numResults})...`);
+      const results = await swebenchScraper(numResults);
       console.log('\n--- SWE-Bench Scraper Results ---');
       console.log(JSON.stringify(results, null, 2));
       console.log('-------------------------------\n');
