@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 
-async function swebenchScraper(count = 10) {
+async function swebenchScraper(count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
   let browser;
   try {
     // Add --no-sandbox flag for cron compatibility
@@ -10,12 +10,12 @@ async function swebenchScraper(count = 10) {
     console.log('Navigating to SWebench page...');
     await page.goto('https://www.swebench.com/#verified', {
       waitUntil: 'networkidle2',
-      timeout: 60000
+      timeout: navigationTimeout
     });
 
     console.log('Waiting for leaderboard to load...');
     // Wait for the specific table for the "Verified" leaderboard
-    await page.waitForSelector('div#leaderboard-Verified table.data-table', { timeout: 30000 });
+    await page.waitForSelector('div#leaderboard-Verified table.data-table', { timeout: selectorTimeout });
 
     const allModels = await page.evaluate(() => {
       // Select rows from the "Verified" leaderboard table
@@ -71,8 +71,10 @@ if (require.main === module) {
   (async () => {
     try {
       const numResults = process.argv[2] ? parseInt(process.argv[2], 10) : 10; // Allow passing count via CLI for direct run
-      console.log(`Running SWE-Bench scraper directly (top ${numResults})...`);
-      const results = await swebenchScraper(numResults);
+      const navTimeout = process.argv[3] ? parseInt(process.argv[3], 10) : 60000;
+      const selTimeout = process.argv[4] ? parseInt(process.argv[4], 10) : 30000;
+      console.log(`Running SWE-Bench scraper directly (top ${numResults}, navTimeout: ${navTimeout}, selTimeout: ${selTimeout})...`);
+      const results = await swebenchScraper(numResults, navTimeout, selTimeout);
       console.log('\n--- SWE-Bench Scraper Results ---');
       console.log(JSON.stringify(results, null, 2));
       console.log('-------------------------------\n');

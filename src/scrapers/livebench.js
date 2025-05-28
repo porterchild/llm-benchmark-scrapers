@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 
-async function livebenchScraper(count = 10) {
+async function livebenchScraper(count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
   let browser;
   try {
     // Add --no-sandbox flag for cron compatibility
@@ -10,11 +10,11 @@ async function livebenchScraper(count = 10) {
     console.log('Navigating to LiveBench page...');
     await page.goto('https://livebench.ai/#/', {
       waitUntil: 'networkidle2',
-      timeout: 60000
+      timeout: navigationTimeout
     });
 
     console.log('Waiting for leaderboard to load...');
-    await page.waitForSelector('table', { timeout: 30000 });
+    await page.waitForSelector('table', { timeout: selectorTimeout });
 
     const allModels = await page.evaluate(() => {
       const rows = Array.from(document.querySelectorAll('table tbody tr'));

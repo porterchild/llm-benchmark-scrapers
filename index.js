@@ -14,6 +14,8 @@ const { publishToNostr } = require('./src/nostr');
 
 const stateFilePath = path.join(__dirname, 'yesterdayScores.txt');
 const SCRAPER_TIMEOUT_MS = 60000; // 60 seconds timeout for each scraper
+const SCRAPER_NAVIGATION_TIMEOUT_MS = 60000; // 60 seconds navigation timeout for puppeteer
+const SCRAPER_SELECTOR_TIMEOUT_MS = 30000; // 30 seconds selector timeout for puppeteer
 
 const openRouter = new OpenRouterClient(process.env.OPENROUTER_API_KEY);
 const nostrSecretKeyNsec = process.env.NOSTR_BOT_NSEC; // Use NOSTR_BOT_NSEC
@@ -74,7 +76,7 @@ async function checkNetwork() {
 
 async function runAllScrapersAndMakePost() {
   try {
-    console.log(`Running all benchmark scrapers (timeout: ${SCRAPER_TIMEOUT_MS / 1000}s each)...\n`);
+    console.log(`Running all benchmark scrapers (scraper timeout: ${SCRAPER_TIMEOUT_MS / 1000}s, navigation timeout: ${SCRAPER_NAVIGATION_TIMEOUT_MS / 1000}s, selector timeout: ${SCRAPER_SELECTOR_TIMEOUT_MS / 1000}s)...\n`);
 
     // Network check with retries
     const maxRetries = 20; // 10 minutes / 30 seconds = 20 retries
@@ -117,19 +119,19 @@ async function runAllScrapersAndMakePost() {
     // 2. Run scrapers with individual timeouts
     const numResults = 20; // Define the number of results to fetch
     const scraperPromises = [
-      withTimeout(livebenchScraper(numResults), SCRAPER_TIMEOUT_MS, 'LiveBench')
+      withTimeout(livebenchScraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'LiveBench')
         .catch(e => { console.error("LiveBench Scraper failed:", e.message || e); return []; }),
-      withTimeout(simplebenchScraper(numResults), SCRAPER_TIMEOUT_MS, 'SimpleBench')
+      withTimeout(simplebenchScraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'SimpleBench')
         .catch(e => { console.error("SimpleBench Scraper failed:", e.message || e); return []; }),
-      withTimeout(swebenchScraper(numResults), SCRAPER_TIMEOUT_MS, 'SWebench')
+      withTimeout(swebenchScraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'SWebench')
         .catch(e => { console.error("SWebench Scraper failed:", e.message || e); return []; }),
-      withTimeout(aiderScraper(numResults), SCRAPER_TIMEOUT_MS, 'Aider')
+      withTimeout(aiderScraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'Aider')
         .catch(e => { console.error("Aider Scraper failed:", e.message || e); return []; }),
-      withTimeout(arcAgi1Scraper(numResults), SCRAPER_TIMEOUT_MS, 'ARC-AGI-1')
+      withTimeout(arcAgi1Scraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'ARC-AGI-1')
         .catch(e => { console.error("ARC-AGI-1 Scraper failed:", e.message || e); return []; }),
-      withTimeout(arcAgi2Scraper(numResults), SCRAPER_TIMEOUT_MS, 'ARC-AGI-2')
+      withTimeout(arcAgi2Scraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'ARC-AGI-2')
         .catch(e => { console.error("ARC-AGI-2 Scraper failed:", e.message || e); return []; }),
-      withTimeout(livecodebenchScraper(numResults), SCRAPER_TIMEOUT_MS, 'LiveCodeBench')
+      withTimeout(livecodebenchScraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'LiveCodeBench')
         .catch(e => { console.error("LiveCodeBench Scraper failed:", e.message || e); return []; })
     ].filter(Boolean); // Filter out any explicitly undefined promises if needed (though catch handles failures)
 

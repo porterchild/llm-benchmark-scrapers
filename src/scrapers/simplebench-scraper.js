@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 
-async function simplebenchScraper(count = 10) {
+async function simplebenchScraper(count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
   let browser;
   try {
     // Add --no-sandbox flag for cron compatibility
@@ -11,11 +11,11 @@ async function simplebenchScraper(count = 10) {
     console.log('Navigating to SimpleBench page...');
     await page.goto('https://simple-bench.com/', {
       waitUntil: 'networkidle2',
-      timeout: 60000
+      timeout: navigationTimeout
     });
 
     console.log('Waiting for content to load...');
-    await page.waitForSelector('body', { timeout: 30000 });
+    await page.waitForSelector('body', { timeout: selectorTimeout });
 
     // Load the HTML content into a variable
     const htmlContent = await page.content();

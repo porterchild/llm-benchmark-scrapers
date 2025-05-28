@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 
-async function aiderScraper(count = 10) {
+async function aiderScraper(count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
   let browser;
   const url = 'https://aider.chat/docs/leaderboards/';
   console.log(`Navigating to Aider Leaderboard page: ${url}`);
@@ -12,7 +12,7 @@ async function aiderScraper(count = 10) {
 
     await page.goto(url, {
       waitUntil: 'networkidle2',
-      timeout: 60000 // 60 seconds navigation timeout
+      timeout: navigationTimeout
     });
 
     console.log('Extracting Aider leaderboard data...');
@@ -94,8 +94,11 @@ if (require.main === module) {
   (async () => {
     try {
       const numResults = process.argv[2] ? parseInt(process.argv[2], 10) : 10; // Allow passing count via CLI for direct run
-      console.log(`Running Aider scraper directly (top ${numResults})...`);
-      const results = await aiderScraper(numResults);
+      // For direct runs, use default timeouts or allow overriding if needed
+      const navTimeout = process.argv[3] ? parseInt(process.argv[3], 10) : 60000;
+      const selTimeout = process.argv[4] ? parseInt(process.argv[4], 10) : 30000;
+      console.log(`Running Aider scraper directly (top ${numResults}, navTimeout: ${navTimeout}, selTimeout: ${selTimeout})...`);
+      const results = await aiderScraper(numResults, navTimeout, selTimeout);
       console.log('\n--- Aider Scraper Results ---');
       console.log(JSON.stringify(results, null, 2));
       console.log('---------------------------\n');

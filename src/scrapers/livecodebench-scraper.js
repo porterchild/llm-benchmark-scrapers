@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 
-async function livecodebenchScraper(count = 10) {
+async function livecodebenchScraper(count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
   let browser;
   try {
     // Add --no-sandbox flag for cron compatibility
@@ -10,7 +10,7 @@ async function livecodebenchScraper(count = 10) {
     console.log('Navigating to LiveCodeBench page...');
     await page.goto('https://livecodebench.github.io/leaderboard.html', {
       waitUntil: 'networkidle2', // Wait for network to be idle
-      timeout: 60000
+      timeout: navigationTimeout
     });
 
     // Add a small fixed delay to allow JS rendering to complete after network idle
@@ -20,7 +20,7 @@ async function livecodebenchScraper(count = 10) {
     console.log('Waiting for AG Grid leaderboard rows to load...');
     const agGridRowSelector = 'div.ag-center-cols-container div[role="row"]';
     try {
-      await page.waitForSelector(agGridRowSelector, { timeout: 60000 });
+      await page.waitForSelector(agGridRowSelector, { timeout: selectorTimeout });
       console.log('AG Grid rows found.');
     } catch (e) {
       console.error('Error waiting for AG Grid rows:', e.message);
@@ -92,7 +92,9 @@ module.exports = livecodebenchScraper;
 // node src/scrapers/livecodebench-scraper.js
 if (require.main === module) {
   const numResults = process.argv[2] ? parseInt(process.argv[2], 10) : 10; // Allow passing count via CLI
-  livecodebenchScraper(numResults).then(results => {
+  const navTimeout = process.argv[3] ? parseInt(process.argv[3], 10) : 60000;
+  const selTimeout = process.argv[4] ? parseInt(process.argv[4], 10) : 30000;
+  livecodebenchScraper(numResults, navTimeout, selTimeout).then(results => {
     console.log(`LiveCodeBench Scraper Results (Top ${numResults}):`);
     console.table(results);
   }).catch(error => {
