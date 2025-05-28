@@ -11,11 +11,16 @@ const livecodebenchScraper = require('./src/scrapers/livecodebench-scraper');
 const OpenRouterClient = require('./src/openrouter');
 const { getComparisonPrompt } = require('./src/prompts');
 const { publishToNostr } = require('./src/nostr');
+const os = require('os'); // Import the 'os' module
+
+// Determine if running on a Raspberry Pi (this is approximate)
+const mightBeRaspberryPi = os.platform() === 'linux' && (os.arch() === 'arm' || os.arch() === 'arm64');
+const TIMEOUT_MULTIPLIER = mightBeRaspberryPi ? 10 : 1; // 10x timeout for Raspberry Pi, 1x for others
 
 const stateFilePath = path.join(__dirname, 'yesterdayScores.txt');
-const SCRAPER_TIMEOUT_MS = 60000; // 60 seconds timeout for each scraper
-const SCRAPER_NAVIGATION_TIMEOUT_MS = 60000; // 60 seconds navigation timeout for puppeteer
-const SCRAPER_SELECTOR_TIMEOUT_MS = 30000; // 30 seconds selector timeout for puppeteer
+const SCRAPER_TIMEOUT_MS = 60000 * TIMEOUT_MULTIPLIER; // 60 seconds timeout for each scraper
+const SCRAPER_NAVIGATION_TIMEOUT_MS = 60000 * TIMEOUT_MULTIPLIER; // 60 seconds navigation timeout for puppeteer
+const SCRAPER_SELECTOR_TIMEOUT_MS = 30000 * TIMEOUT_MULTIPLIER; // 30 seconds selector timeout for puppeteer
 
 const openRouter = new OpenRouterClient(process.env.OPENROUTER_API_KEY);
 const nostrSecretKeyNsec = process.env.NOSTR_BOT_NSEC; // Use NOSTR_BOT_NSEC
@@ -76,6 +81,7 @@ async function checkNetwork() {
 
 async function runAllScrapersAndMakePost() {
   try {
+    console.log(`Detected environment: ${os.platform()} ${os.arch()}. Raspberry Pi detected: ${isRaspberryPi}. Timeout multiplier: ${TIMEOUT_MULTIPLIER}x.`);
     console.log(`Running all benchmark scrapers (scraper timeout: ${SCRAPER_TIMEOUT_MS / 1000}s, navigation timeout: ${SCRAPER_NAVIGATION_TIMEOUT_MS / 1000}s, selector timeout: ${SCRAPER_SELECTOR_TIMEOUT_MS / 1000}s)...\n`);
 
     // Network check with retries
