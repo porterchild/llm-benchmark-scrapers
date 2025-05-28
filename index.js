@@ -15,6 +15,13 @@ const os = require('os'); // Import the 'os' module
 
 // Determine if running on a Raspberry Pi (this is approximate)
 const mightBeRaspberryPi = os.platform() === 'linux' && (os.arch() === 'arm' || os.arch() === 'arm64');
+
+if (mightBeRaspberryPi) {
+  // not sure why the rpi needs this, but puppeteer won't work without it
+  process.env.PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium-browser';
+  console.log('Set PUPPETEER_EXECUTABLE_PATH for Raspberry Pi:', process.env.PUPPETEER_EXECUTABLE_PATH);
+}
+
 const TIMEOUT_MULTIPLIER = mightBeRaspberryPi ? 10 : 1; // 10x timeout for Raspberry Pi, 1x for others
 
 const stateFilePath = path.join(__dirname, 'yesterdayScores.txt');
@@ -81,7 +88,7 @@ async function checkNetwork() {
 
 async function runAllScrapersAndMakePost() {
   try {
-    console.log(`Detected environment: ${os.platform()} ${os.arch()}. Raspberry Pi detected: ${isRaspberryPi}. Timeout multiplier: ${TIMEOUT_MULTIPLIER}x.`);
+    console.log(`Detected environment: ${os.platform()} ${os.arch()}. Raspberry Pi detected: ${mightBeRaspberryPi}. Timeout multiplier: ${TIMEOUT_MULTIPLIER}x.`);
     console.log(`Running all benchmark scrapers (scraper timeout: ${SCRAPER_TIMEOUT_MS / 1000}s, navigation timeout: ${SCRAPER_NAVIGATION_TIMEOUT_MS / 1000}s, selector timeout: ${SCRAPER_SELECTOR_TIMEOUT_MS / 1000}s)...\n`);
 
     // Network check with retries
