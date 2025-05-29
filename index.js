@@ -12,6 +12,7 @@ const OpenRouterClient = require('./src/openrouter');
 const { getComparisonPrompt } = require('./src/prompts');
 const { publishToNostr } = require('./src/nostr');
 const os = require('os'); // Import the 'os' module
+const puppeteer = require('puppeteer'); // Import puppeteer
 
 // Determine if running on a Raspberry Pi (this is approximate)
 const mightBeRaspberryPi = os.platform() === 'linux' && (os.arch() === 'arm' || os.arch() === 'arm64');
@@ -87,9 +88,21 @@ async function checkNetwork() {
 }
 
 async function runAllScrapersAndMakePost() {
+  let browser;
   try {
     console.log(`Detected environment: ${os.platform()} ${os.arch()}. Raspberry Pi detected: ${mightBeRaspberryPi}. Timeout multiplier: ${TIMEOUT_MULTIPLIER}x.`);
     console.log(`Running all benchmark scrapers (scraper timeout: ${SCRAPER_TIMEOUT_MS / 1000}s, navigation timeout: ${SCRAPER_NAVIGATION_TIMEOUT_MS / 1000}s, selector timeout: ${SCRAPER_SELECTOR_TIMEOUT_MS / 1000}s)...\n`);
+
+    // Launch browser once
+    console.log('Launching Puppeteer browser...');
+    const launchOptions = {
+      args: ['--no-sandbox'] 
+    };
+    if (mightBeRaspberryPi) {
+      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
+    browser = await puppeteer.launch(launchOptions);
+    console.log('Puppeteer browser launched.');
 
     // Network check with retries
     const maxRetries = 20; // 10 minutes / 30 seconds = 20 retries
@@ -132,19 +145,19 @@ async function runAllScrapersAndMakePost() {
     // 2. Run scrapers with individual timeouts
     const numResults = 20; // Define the number of results to fetch
     const scraperPromises = [
-      withTimeout(livebenchScraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'LiveBench')
+      withTimeout(livebenchScraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'LiveBench')
         .catch(e => { console.error("LiveBench Scraper failed:", e.message || e); return []; }),
-      withTimeout(simplebenchScraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'SimpleBench')
+      withTimeout(simplebenchScraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'SimpleBench')
         .catch(e => { console.error("SimpleBench Scraper failed:", e.message || e); return []; }),
-      withTimeout(swebenchScraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'SWebench')
+      withTimeout(swebenchScraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'SWebench')
         .catch(e => { console.error("SWebench Scraper failed:", e.message || e); return []; }),
-      withTimeout(aiderScraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'Aider')
+      withTimeout(aiderScraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'Aider')
         .catch(e => { console.error("Aider Scraper failed:", e.message || e); return []; }),
       withTimeout(arcAgi1Scraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'ARC-AGI-1')
-        .catch(e => { console.error("ARC-AGI-1 Scraper failed:", e.message || e); return []; }),
+        .catch(e => { console.error("ARC-AGI-1 Scraper failed:", e.message || e); return []; }), // ARC-AGI scrapers don't use Puppeteer
       withTimeout(arcAgi2Scraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'ARC-AGI-2')
-        .catch(e => { console.error("ARC-AGI-2 Scraper failed:", e.message || e); return []; }),
-      withTimeout(livecodebenchScraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'LiveCodeBench')
+        .catch(e => { console.error("ARC-AGI-2 Scraper failed:", e.message || e); return []; }), // ARC-AGI scrapers don't use Puppeteer
+      withTimeout(livecodebenchScraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'LiveCodeBench')
         .catch(e => { console.error("LiveCodeBench Scraper failed:", e.message || e); return []; })
     ].filter(Boolean); // Filter out any explicitly undefined promises if needed (though catch handles failures)
 
@@ -227,6 +240,12 @@ async function runAllScrapersAndMakePost() {
 
   } catch (error) {
     console.error('Error in main execution:', error);
+  } finally {
+    if (browser) {
+      console.log('Closing Puppeteer browser...');
+      await browser.close();
+      console.log('Puppeteer browser closed.');
+    }
   }
 }
 

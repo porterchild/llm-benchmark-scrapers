@@ -1,10 +1,5 @@
-const puppeteer = require('puppeteer');
-
-async function livebenchScraper(count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
-  let browser;
+async function livebenchScraper(browser, count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
   try {
-    // Add --no-sandbox flag for cron compatibility
-    browser = await puppeteer.launch({ args: ['--no-sandbox'] }); 
     const page = await browser.newPage();
     
     console.log('Navigating to LiveBench page...');
@@ -47,10 +42,6 @@ async function livebenchScraper(count = 10, navigationTimeout = 60000, selectorT
   } catch (error) {
     console.error('Error scraping LiveBench:', error.message);
     throw error;
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
   }
 }
 

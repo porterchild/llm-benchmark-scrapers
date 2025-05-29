@@ -1,10 +1,5 @@
-const puppeteer = require('puppeteer');
-
-async function livecodebenchScraper(count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
-  let browser;
+async function livecodebenchScraper(browser, count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
   try {
-    // Add --no-sandbox flag for cron compatibility
-    browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage'] });
     const page = await browser.newPage();
 
     console.log('Navigating to LiveCodeBench page...');
@@ -79,10 +74,6 @@ async function livecodebenchScraper(count = 10, navigationTimeout = 60000, selec
     // To prevent one scraper failure from stopping all, return empty array on error.
     // The main script can then decide how to handle partial results.
     return [];
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
   }
 }
 
@@ -91,13 +82,33 @@ module.exports = livecodebenchScraper;
 // To test this scraper individually:
 // node src/scrapers/livecodebench-scraper.js
 if (require.main === module) {
-  const numResults = process.argv[2] ? parseInt(process.argv[2], 10) : 10; // Allow passing count via CLI
-  const navTimeout = process.argv[3] ? parseInt(process.argv[3], 10) : 60000;
-  const selTimeout = process.argv[4] ? parseInt(process.argv[4], 10) : 30000;
-  livecodebenchScraper(numResults, navTimeout, selTimeout).then(results => {
-    console.log(`LiveCodeBench Scraper Results (Top ${numResults}):`);
-    console.table(results);
-  }).catch(error => {
-    console.error("Failed to run LiveCodeBench scraper individually:", error);
-  });
+  const puppeteer = require('puppeteer'); // Re-add puppeteer for direct execution
+  (async () => {
+    let browserInstance;
+    try {
+      // Launch a browser for direct execution
+      const launchOptions = {
+        args: ['--no-sandbox'] 
+      };
+      // Only set executablePath if PUPPETEER_EXECUTABLE_PATH is defined (e.g., for Raspberry Pi)
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+      }
+      browserInstance = await puppeteer.launch(launchOptions);
+
+      const numResults = process.argv[2] ? parseInt(process.argv[2], 10) : 10; // Allow passing count via CLI
+      const navTimeout = process.argv[3] ? parseInt(process.argv[3], 10) : 60000;
+      const selTimeout = process.argv[4] ? parseInt(process.argv[4], 10) : 30000;
+      console.log(`Running LiveCodeBench scraper directly (top ${numResults}, navTimeout: ${navTimeout}, selTimeout: ${selTimeout})...`);
+      const results = await livecodebenchScraper(browserInstance, numResults, navTimeout, selTimeout);
+      console.log(`LiveCodeBench Scraper Results (Top ${numResults}):`);
+      console.table(results);
+    } catch (error) {
+      console.error("Failed to run LiveCodeBench scraper individually:", error);
+    } finally {
+      if (browserInstance) {
+        await browserInstance.close();
+      }
+    }
+  })();
 }

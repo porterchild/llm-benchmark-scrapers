@@ -1,10 +1,5 @@
-const puppeteer = require('puppeteer');
-
-async function swebenchScraper(count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
-  let browser;
+async function swebenchScraper(browser, count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
   try {
-    // Add --no-sandbox flag for cron compatibility
-    browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
     
     console.log('Navigating to SWebench page...');
@@ -57,10 +52,6 @@ async function swebenchScraper(count = 10, navigationTimeout = 60000, selectorTi
   } catch (error) {
     console.error('Error scraping SWebench:', error.message);
     throw error;
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
   }
 }
 
@@ -68,19 +59,35 @@ module.exports = swebenchScraper;
 
 // Add this block to make the script runnable directly
 if (require.main === module) {
+  const puppeteer = require('puppeteer'); // Re-add puppeteer for direct execution
   (async () => {
+    let browserInstance;
     try {
+      // Launch a browser for direct execution
+      const launchOptions = {
+        args: ['--no-sandbox'] 
+      };
+      // Only set executablePath if PUPPETEER_EXECUTABLE_PATH is defined (e.g., for Raspberry Pi)
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+      }
+      browserInstance = await puppeteer.launch(launchOptions);
+
       const numResults = process.argv[2] ? parseInt(process.argv[2], 10) : 10; // Allow passing count via CLI for direct run
       const navTimeout = process.argv[3] ? parseInt(process.argv[3], 10) : 60000;
       const selTimeout = process.argv[4] ? parseInt(process.argv[4], 10) : 30000;
       console.log(`Running SWE-Bench scraper directly (top ${numResults}, navTimeout: ${navTimeout}, selTimeout: ${selTimeout})...`);
-      const results = await swebenchScraper(numResults, navTimeout, selTimeout);
+      const results = await swebenchScraper(browserInstance, numResults, navTimeout, selTimeout);
       console.log('\n--- SWE-Bench Scraper Results ---');
       console.log(JSON.stringify(results, null, 2));
       console.log('-------------------------------\n');
     } catch (error) {
       console.error('Error running SWE-Bench scraper directly:', error);
       process.exit(1); // Exit with error code if direct run fails
+    } finally {
+      if (browserInstance) {
+        await browserInstance.close();
+      }
     }
   })();
 }

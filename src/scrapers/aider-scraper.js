@@ -1,13 +1,8 @@
-const puppeteer = require('puppeteer');
-
-async function aiderScraper(count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
-  let browser;
+async function aiderScraper(browser, count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
   const url = 'https://aider.chat/docs/leaderboards/';
   console.log(`Navigating to Aider Leaderboard page: ${url}`);
 
   try {
-    // Add --no-sandbox flag for cron compatibility
-    browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
 
     await page.goto(url, {
@@ -79,11 +74,6 @@ async function aiderScraper(count = 10, navigationTimeout = 60000, selectorTimeo
     console.error(`Error scraping Aider Leaderboard (${url}):`, error.message);
     // Re-throw the error so the main script knows it failed
     throw new Error(`Aider scraper failed: ${error.message}`);
-  } finally {
-    if (browser) {
-      console.log('Closing browser for Aider scraper.');
-      await browser.close();
-    }
   }
 }
 
@@ -91,20 +81,36 @@ module.exports = aiderScraper;
 
 // Add this block to make the script runnable directly
 if (require.main === module) {
+  const puppeteer = require('puppeteer'); // Re-add puppeteer for direct execution
   (async () => {
+    let browserInstance;
     try {
+      // Launch a browser for direct execution
+      const launchOptions = {
+        args: ['--no-sandbox'] 
+      };
+      // Only set executablePath if PUPPETEER_EXECUTABLE_PATH is defined (e.g., for Raspberry Pi)
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+      }
+      browserInstance = await puppeteer.launch(launchOptions);
+
       const numResults = process.argv[2] ? parseInt(process.argv[2], 10) : 10; // Allow passing count via CLI for direct run
       // For direct runs, use default timeouts or allow overriding if needed
       const navTimeout = process.argv[3] ? parseInt(process.argv[3], 10) : 60000;
       const selTimeout = process.argv[4] ? parseInt(process.argv[4], 10) : 30000;
       console.log(`Running Aider scraper directly (top ${numResults}, navTimeout: ${navTimeout}, selTimeout: ${selTimeout})...`);
-      const results = await aiderScraper(numResults, navTimeout, selTimeout);
+      const results = await aiderScraper(browserInstance, numResults, navTimeout, selTimeout);
       console.log('\n--- Aider Scraper Results ---');
       console.log(JSON.stringify(results, null, 2));
       console.log('---------------------------\n');
     } catch (error) {
       console.error('Error running Aider scraper directly:', error);
       process.exit(1); // Exit with error code if direct run fails
+    } finally {
+      if (browserInstance) {
+        await browserInstance.close();
+      }
     }
   })();
 }

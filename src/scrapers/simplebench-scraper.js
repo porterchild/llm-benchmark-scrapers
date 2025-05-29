@@ -1,11 +1,7 @@
-const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 
-async function simplebenchScraper(count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
-  let browser;
+async function simplebenchScraper(browser, count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
   try {
-    // Add --no-sandbox flag for cron compatibility
-    browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
     
     console.log('Navigating to SimpleBench page...');
@@ -46,10 +42,6 @@ async function simplebenchScraper(count = 10, navigationTimeout = 60000, selecto
   } catch (error) {
     console.error('Error fetching SimpleBench page:', error.message);
     throw error;
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
   }
 }
 
