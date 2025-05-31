@@ -25,7 +25,7 @@ If the new (current) results are empty for a leaderboard, skip that leaderboard.
 
 **Formatting Requirements:**
 For each leaderboard section (e.g., "Chatbot Arena Leaderboard", "LiveBench Leaderboard") that has *any* change mentioned in your summary, include a hashtag derived from its name (e.g., #ChatbotArena, #LiveBench). 
-For each *specific model name* mentioned as having changed rank or score in your summary, include a hashtag for that model (e.g., #GeminiPro for Gemini-2.5-Pro-Exp-03-25, #ClaudeSonnet for Claude 3.7 Sonnet). Use underscores instead of spaces or special characters in model name hashtags.
+For each *specific model name* mentioned as having changed rank or score in your summary, include a hashtag for that model (e.g., #GeminiPro for Gemini-2.5-Pro-Exp-03-25, #ClaudeSonnet for Claude 3.7 Sonnet).
 
 After this, include a funny/snarky AI progress-themed comment like "May you prosper through the singularity", or "May the future bring you many robotic e-girls", or funny obvious misquotes like "Never underestimate exponential AI improvement - Abraham Lincoln". Make up your own. 
 
@@ -35,24 +35,34 @@ Here is an example (note, most leaderboards are ignored because they didn't have
 
 🌐 LLM Leaderboard Update 🌐  
 
-#SimpleBench: #Gemini ninja-rolls into 10th place (31.1%), booting #qwq into the existential void.  
+#SimpleBench: #Claude4Opus storms in with 58.8% to claim the throne! #DeepSeekR1_0528 debuts at 9th.  
 
-New Results-
-=== SimpleBench Leaderboard ===
-1. Gemini 2.5 Pro - 51.6%
-2. Claude 3.7 Sonnet (thinking) - 46.4%
-3. Claude 3.7 Sonnet - 44.9%
-4. o1-preview - 41.7%
-5. Claude 3.5 Sonnet 10-22 - 41.4%
-6. o1-2024-12-17 (high) - 40.1%
-7. o1-2024-12-17 (med) - 36.7%
-8. Grok 3 - 36.1%
-9. GPT-4.5 - 34.5%
-10. Gemini-exp-1206 - 31.1%
+New Results-  
+=== SimpleBench Leaderboard ===  
+1. Claude 4 Opus (thinking) - 58.8%  
+2. o3 (high) - 53.1%  
+3. Gemini 2.5 Pro - 51.6%  
+4. Claude 3.7 Sonnet (thinking) - 46.4%  
+5. Claude 4 Sonnet (thinking) - 45.5%  
+6. Claude 3.7 Sonnet - 44.9%  
+7. o1-preview - 41.7%  
+8. Claude 3.5 Sonnet 10-22 - 41.4%  
+9. DeepSeek R1 05/28 - 40.8%  
+10. o1-2024-12-17 (high) - 40.1%  
+11. o4-mini (high) - 38.7%  
+12. o1-2024-12-17 (med) - 36.7%  
+13. Grok 3 - 36.1%  
+14. GPT-4.5 - 34.5%  
+15. Gemini-exp-1206 - 31.1%  
+16. Qwen3 235B-A22B - 31.0%  
+17. DeepSeek R1 - 30.9%  
+18. Gemini 2.0 Flash Thinking - 30.7%  
+19. Llama 4 Maverick - 27.7%  
+20. Claude 3.5 Sonnet 06-20 - 27.5%  
 
 "History is written by the models with the best validation scores." — A slightly confused Thucydides  
 
-#ai #LLM #SimpleBench
+#ai #LLM #SimpleBench 
 
 
 End of example.
