@@ -8,33 +8,29 @@ async function livecodebenchScraper(browser, count = 10, navigationTimeout = 600
       timeout: navigationTimeout
     });
 
-    // Add a small fixed delay to allow JS rendering to complete after network idle
-    console.log('Waiting a few seconds for dynamic content to render...');
-    await new Promise(resolve => setTimeout(resolve, 5000)); // 5 seconds delay
-
-    console.log('Waiting for AG Grid leaderboard rows to load...');
-    const agGridRowSelector = 'div.ag-center-cols-container div[role="row"]';
+    console.log('Waiting for leaderboard table body to load...');
+    const tableBodySelector = 'tbody#tableBody';
     try {
-      await page.waitForSelector(agGridRowSelector, { timeout: selectorTimeout });
-      console.log('AG Grid rows found.');
+      await page.waitForSelector(tableBodySelector, { timeout: selectorTimeout });
+      console.log('Leaderboard table body found. Now evaluating rows...');
     } catch (e) {
-      console.error('Error waiting for AG Grid rows:', e.message);
-      // Optionally, log more page context here if needed for debugging
-      // const bodyHTML = await page.evaluate(() => document.body.innerHTML);
-      // console.log("Body HTML on error:", bodyHTML.substring(0, 2000));
+      console.error('Error waiting for leaderboard table body:', e.message);
       throw e; 
     }
 
-    const allModels = await page.evaluate((rowSelector) => {
+    const allModels = await page.evaluate(() => {
       const models = [];
-      const rowElements = Array.from(document.querySelectorAll(rowSelector));
+      // Query for rows within the table body
+      const rowElements = Array.from(document.querySelectorAll('tbody#tableBody tr'));
 
       rowElements.forEach((row) => {
-        const modelCell = row.querySelector('div[col-id="Model"] span.ag-cell-value');
-        const scoreCell = row.querySelector('div[col-id="Pass@1"] span.ag-cell-value');
+        // Model name is in the second td (index 1)
+        const modelCell = row.children[1];
+        // Score (Pass@1) is in the third td (index 2)
+        const scoreCell = row.children[2];
 
         if (modelCell && scoreCell) {
-          // Model name might be directly in span or inside an <a> tag within the span
+          // Model name might be directly in td or inside an <a> tag within the td
           const modelNameElement = modelCell.querySelector('a') || modelCell;
           const modelName = modelNameElement.textContent ? modelNameElement.textContent.trim() : '';
           
@@ -56,7 +52,7 @@ async function livecodebenchScraper(browser, count = 10, navigationTimeout = 600
         }
       });
       return models;
-    }, agGridRowSelector); // Pass selector to page.evaluate
+    }); 
 
     // Sort by score (descending) and take top N
     const topN = allModels
@@ -83,6 +79,17 @@ module.exports = livecodebenchScraper;
 // node src/scrapers/livecodebench-scraper.js
 if (require.main === module) {
   const puppeteer = require('puppeteer'); // Re-add puppeteer for direct execution
+  const os = require('os'); // Import os module for direct execution
+
+  // Determine if running on a Raspberry Pi (this is approximate)
+  const mightBeRaspberryPi = os.platform() === 'linux' && (os.arch() === 'arm' || os.arch() === 'arm64');
+
+  if (mightBeRaspberryPi) {
+    // not sure why the rpi needs this, but puppeteer won't work without it
+    process.env.PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium-browser';
+    console.log('Set PUPPETEER_EXECUTABLE_PATH for Raspberry Pi:', process.env.PUPPETEER_EXECUTABLE_PATH);
+  }
+
   (async () => {
     let browserInstance;
     try {
@@ -90,7 +97,7 @@ if (require.main === module) {
       const launchOptions = {
         args: ['--no-sandbox'] 
       };
-      // Only set executablePath if PUPPETEER_EXECUTABLE_PATH is defined (e.g., for Raspberry Pi)
+      // Set executablePath if PUPPETEER_EXECUTABLE_PATH is defined (e.g., for Raspberry Pi)
       if (process.env.PUPPETEER_EXECUTABLE_PATH) {
         launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
       }
