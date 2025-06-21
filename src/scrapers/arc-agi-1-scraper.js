@@ -1,23 +1,23 @@
-// Import the shared CSV fetching and parsing function
-const { fetchAndParseArcCsv } = require('./arc-agi-2-scraper');
+// Import the shared JSON fetching and parsing function
+const { fetchAndParseArcJson } = require('./arc-agi-2-scraper');
 
 /**
  * Scrapes the ARC-AGI-1 leaderboard data.
- * Uses the shared fetchAndParseArcCsv function with the v1 score column.
+ * Uses the shared fetchAndParseArcJson function with the v1 semi-private dataset ID.
  * @param {number} count - The number of top models to return.
  * @returns {Promise<Array<{model: string, score: string}>>} - A promise that resolves to the top N models formatted for display.
  */
 async function arcAgi1Scraper(count = 10) {
   try {
-    // Fetch and parse using the v1 score column
-    const records = await fetchAndParseArcCsv('v1_Semi_Private_Score', 'ARC-AGI-1');
+    // Fetch and parse using the v1 semi-private dataset ID
+    const records = await fetchAndParseArcJson('v1_Semi_Private', 'ARC-AGI-1');
 
     // Sort by score (descending) based on the fetched v1 scores
     const topN = records
       .sort((a, b) => b.score - a.score) // Sort by raw score number
       .slice(0, count)
       .map(record => {
-        // Score is already normalized (0-100 scale) by fetchAndParseArcCsv
+        // Score is already normalized (0-100 scale) by fetchAndParseArcJson
         // Just format it to one decimal place and add '%'
         return {
           model: record.model,
@@ -25,7 +25,7 @@ async function arcAgi1Scraper(count = 10) {
         };
       });
 
-    console.log(`Successfully scraped ${topN.length} entries from ARC-AGI-1 (excluding Human Panel, Stem Grad, Avg. Mturker).`); // Updated log
+    console.log(`Successfully scraped ${topN.length} entries from ARC-AGI-1.`);
     return topN;
 
   } catch (error) {
