@@ -24,16 +24,13 @@ If there are no changes detected between the previous and current scores for a g
 If the new (current) results are empty for a leaderboard, skip that leaderboard.
 
 **Formatting Requirements:**
-For each leaderboard section (e.g., "Chatbot Arena Leaderboard", "LiveBench Leaderboard") that has *any* change mentioned in your summary, include a hashtag derived from its name (e.g., #ChatbotArena, #LiveBench). 
-For each *specific model name* mentioned as having changed rank or score in your summary, include a hashtag for that model (e.g., #GeminiPro for Gemini-2.5-Pro-Exp-03-25, #ClaudeSonnet for Claude 3.7 Sonnet).
-
-Include the hashtags #ai and #LLM at the very end of the post.
+At the end of the post, include #ai and #LLM, plus a hashtag for each leaderboard that had changes (e.g., #SimpleBench, #LiveBench).
 
 Here is an example (note, most leaderboards are ignored because they didn't have changes on this round):
 
 🌐 LLM Leaderboard Update 🌐  
 
-#SimpleBench: #Claude4Opus storms in with 58.8% to claim the throne! #DeepSeekR1_0528 debuts at 9th.  
+SimpleBench: Claude 4 Opus storms in with 58.8% to claim the throne! DeepSeek R1 05/28 debuts at 9th.  
 
 New Results-  
 === SimpleBench Leaderboard ===  
