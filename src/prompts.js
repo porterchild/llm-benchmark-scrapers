@@ -27,8 +27,6 @@ If the new (current) results are empty for a leaderboard, skip that leaderboard.
 For each leaderboard section (e.g., "Chatbot Arena Leaderboard", "LiveBench Leaderboard") that has *any* change mentioned in your summary, include a hashtag derived from its name (e.g., #ChatbotArena, #LiveBench). 
 For each *specific model name* mentioned as having changed rank or score in your summary, include a hashtag for that model (e.g., #GeminiPro for Gemini-2.5-Pro-Exp-03-25, #ClaudeSonnet for Claude 3.7 Sonnet).
 
-After this, include a funny/snarky AI progress-themed comment like "May you prosper through the singularity", or "May the future bring you many robotic e-girls", or funny obvious misquotes like "Never underestimate exponential AI improvement - Abraham Lincoln". Make up your own. 
-
 Include the hashtags #ai and #LLM at the very end of the post.
 
 Here is an example (note, most leaderboards are ignored because they didn't have changes on this round):
@@ -60,9 +58,7 @@ New Results-
 19. Llama 4 Maverick - 27.7%  
 20. Claude 3.5 Sonnet 06-20 - 27.5%  
 
-"History is written by the models with the best validation scores." — A slightly confused Thucydides  
-
-#ai #LLM #SimpleBench 
+#ai #LLM #SimpleBench
 
 
 End of example.
