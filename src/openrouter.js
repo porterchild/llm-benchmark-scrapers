@@ -12,10 +12,10 @@ class OpenRouterClient {
   /**
    * Executes a given prompt using the specified OpenRouter model.
    * @param {string} promptContent - The content of the prompt to send to the LLM.
-   * @param {string} [model='x-ai/grok-4.1-fast'] - The OpenRouter model identifier.
+   * @param {string} [model='deepseek/deepseek-v4-flash'] - The OpenRouter model identifier.
    * @returns {Promise<string>} - A promise that resolves to the LLM's response content.
    */
-  async runPrompt(promptContent, model = 'x-ai/grok-4.1-fast') {
+  async runPrompt(promptContent, model = 'deepseek/deepseek-v4-flash') {
     if (!promptContent) {
       throw new Error('Prompt content cannot be empty.');
     }
