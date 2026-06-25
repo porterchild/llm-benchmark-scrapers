@@ -43,8 +43,10 @@ function formatResultsForStorage(results) {
       let score = model.score;
       // Attempt to format score consistently, handling different types
       if (typeof score === 'number') {
-         // Handle percentage formatting for SimpleBench, Aider, and ARC-AGI
-         if (key === 'SimpleBench Leaderboard' || key === 'Aider Polyglot Leaderboard' || key === 'ARC-AGI-1 Leaderboard' || key === 'ARC-AGI-2 Leaderboard') {
+         // Handle percentage formatting for SimpleBench and Aider
+         if (key === 'SimpleBench Leaderboard' || key === 'Aider Polyglot Leaderboard') {
+             score = score.toFixed(1) + '%';
+         } else if (key === 'ARC-AGI-1 Leaderboard' || key === 'ARC-AGI-2 Leaderboard') {
              score = score.toFixed(1) + '%';
          } else if (key === 'LiveBench Leaderboard' || key === 'SWE-Bench Verified Leaderboard' || key === 'LiveCodeBench Leaderboard') {
              score = score.toFixed(2);
@@ -96,7 +98,8 @@ async function runAllScrapersAndMakePost() {
     // Launch browser once
     console.log('Launching Puppeteer browser...');
     const launchOptions = {
-      args: ['--no-sandbox'] 
+      args: ['--no-sandbox'],
+      protocolTimeout: 600000
     };
     if (mightBeRaspberryPi) {
       launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
@@ -153,10 +156,10 @@ async function runAllScrapersAndMakePost() {
         .catch(e => { console.error("SWebench Scraper failed:", e.message || e); return []; }),
       withTimeout(aiderScraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'Aider')
         .catch(e => { console.error("Aider Scraper failed:", e.message || e); return []; }),
-      withTimeout(arcAgi1Scraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'ARC-AGI-1')
-        .catch(e => { console.error("ARC-AGI-1 Scraper failed:", e.message || e); return []; }), // ARC-AGI scrapers don't use Puppeteer
-      withTimeout(arcAgi2Scraper(numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'ARC-AGI-2')
-        .catch(e => { console.error("ARC-AGI-2 Scraper failed:", e.message || e); return []; }), // ARC-AGI scrapers don't use Puppeteer
+      withTimeout(arcAgi1Scraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'ARC-AGI-1')
+        .catch(e => { console.error("ARC-AGI-1 Scraper failed:", e.message || e); return []; }),
+      withTimeout(arcAgi2Scraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'ARC-AGI-2')
+        .catch(e => { console.error("ARC-AGI-2 Scraper failed:", e.message || e); return []; }),
       withTimeout(livecodebenchScraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'LiveCodeBench')
         .catch(e => { console.error("LiveCodeBench Scraper failed:", e.message || e); return []; })
     ].filter(Boolean); // Filter out any explicitly undefined promises if needed (though catch handles failures)
@@ -177,11 +180,14 @@ async function runAllScrapersAndMakePost() {
     const currentResults = {
         'LiveBench Leaderboard': lbResults,
         'SimpleBench Leaderboard': sbResults,
-        'SWE-Bench Verified Leaderboard': swResults,
-        'Aider Polyglot Leaderboard': aiderResults,
         'ARC-AGI-1 Leaderboard': arc1Results,
         'ARC-AGI-2 Leaderboard': arc2Results,
-        'LiveCodeBench Leaderboard': lcbResults 
+        // Aider scraper disabled: benchmark data outdated (o3, Gemini 2.5)
+        // 'Aider Polyglot Leaderboard': aiderResults,
+        // SWE-Bench Verified scraper disabled: site structure changed
+        // 'SWE-Bench Verified Leaderboard': swResults,
+        // LiveCodeBench scraper disabled: data appears outdated
+        // 'LiveCodeBench Leaderboard': lcbResults 
     };
 
     const currentScores = formatResultsForStorage(currentResults);

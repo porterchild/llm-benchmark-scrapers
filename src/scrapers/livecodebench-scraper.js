@@ -1,68 +1,10 @@
 async function livecodebenchScraper(browser, count = 10, navigationTimeout = 60000, selectorTimeout = 30000) {
-  try {
-    const page = await browser.newPage();
-
-    console.log('Navigating to LiveCodeBench page...');
-    await page.goto('https://livecodebench.github.io/leaderboard.html', {
-      waitUntil: 'networkidle2',
-      timeout: navigationTimeout
-    });
-
-    console.log('Waiting a few seconds for dynamic content to render...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
-
-    console.log('Waiting for leaderboard table rows to load...');
-    const rowSelector = '#tableBody tr';
-    try {
-      await page.waitForSelector(rowSelector, { timeout: selectorTimeout });
-      console.log('Table rows found.');
-    } catch (e) {
-      console.error('Error waiting for table rows:', e.message);
-      throw e;
-    }
-
-    const allModels = await page.evaluate((selector) => {
-      const models = [];
-      const rows = Array.from(document.querySelectorAll(selector));
-
-      rows.forEach((row) => {
-        const modelCell = row.querySelector('.model-col');
-        const scoreCells = row.querySelectorAll('.score-col');
-
-        if (modelCell && scoreCells.length > 0) {
-          const modelNameElement = modelCell.querySelector('a') || modelCell;
-          const modelName = modelNameElement.textContent ? modelNameElement.textContent.trim() : '';
-
-          // First score-col is the overall Pass@1 score
-          const scoreText = scoreCells[0].textContent ? scoreCells[0].textContent.trim() : '';
-          const cleanedScoreText = scoreText.replace(/[^0-9.-]+/g, '');
-
-          if (!modelName || cleanedScoreText === '') return;
-
-          const score = parseFloat(cleanedScoreText);
-
-          if (!isNaN(score)) {
-            models.push({ model: modelName, score: score });
-          }
-        }
-      });
-      return models;
-    }, rowSelector);
-
-    const topN = allModels
-      .sort((a, b) => b.score - a.score)
-      .slice(0, count);
-
-    if (topN.length === 0) {
-      console.warn('No valid models found or parsed from LiveCodeBench leaderboard. Returning empty array.');
-      return [];
-    }
-    console.log(`Successfully scraped ${topN.length} models from LiveCodeBench.`);
-    return topN;
-  } catch (error) {
-    console.error('Error scraping LiveCodeBench:', error.message);
-    return [];
-  }
+  // LiveCodeBench at livecodebench.github.io appears to be outdated/abandoned
+  // showing models from mid-2024 (O3, O4, Gemini-2.5). The official repository
+  // has moved to a different structure. This scraper is disabled until
+  // a reliable, up-to-date data source can be found.
+  console.warn('LiveCodeBench scraper disabled: benchmark data appears outdated. Official benchmark has moved to a different structure.');
+  return [];
 }
 
 module.exports = livecodebenchScraper;

@@ -1,47 +1,47 @@
-const { fetchAndParseArcJson } = require('./arc-agi-2-scraper');
-
 /**
  * Scrapes the ARC-AGI-1 leaderboard data.
- * Uses the shared fetchAndParseArcJson function with the v1 datasetId.
+ * @param {object} browser - Puppeteer browser instance (not used, direct API fetch).
  * @param {number} count - The number of top models to return.
- * @returns {Promise<Array<{model: string, score: string}>>} - A promise that resolves to the top N models formatted for display.
+ * @returns {Promise<Array<{model: string, score: string}>>} - A promise that resolves to the top N models.
  */
-async function arcAgi1Scraper(count = 10) {
+async function arcAgi1Scraper(browser, count = 10) {
   try {
-    const records = await fetchAndParseArcJson('v1_Semi_Private', 'ARC-AGI-1');
+    const [evalsRes, modelsRes, providersRes] = await Promise.all([
+      fetch('https://arcprize.org/media/data/evaluations.json'),
+      fetch('https://arcprize.org/media/data/models.json'),
+      fetch('https://arcprize.org/media/data/providers.json')
+    ]);
 
-    const topN = records
+    const [evaluations, models, providers] = await Promise.all([
+      evalsRes.json(),
+      modelsRes.json(),
+      providersRes.json()
+    ]);
+
+    const modelMap = {};
+    models.forEach(m => modelMap[m.id] = { displayName: m.displayName || m.id, providerId: m.providerId });
+
+    const providerMap = {};
+    providers.forEach(p => providerMap[p.id] = p.displayName);
+
+    const arcAgi1Data = evaluations
+      .filter(d => d.datasetId === 'v1_Semi_Private' && d.display)
       .sort((a, b) => b.score - a.score)
-      .slice(0, count)
-      .map(record => ({
-        model: record.model,
-        score: `${record.score.toFixed(1)}%`,
-      }));
+      .slice(0, count);
 
-    console.log(`Successfully scraped ${topN.length} entries from ARC-AGI-1.`);
-    return topN;
-
+    return arcAgi1Data.map(e => {
+      const modelInfo = modelMap[e.modelId] || { displayName: e.modelId, providerId: '' };
+      const providerName = modelInfo.providerId ? (providerMap[modelInfo.providerId] || '') : '';
+      const modelName = providerName ? `${modelInfo.displayName} (${providerName})` : modelInfo.displayName;
+      return {
+        model: modelName,
+        score: (e.score * 100).toFixed(1) + '%'
+      };
+    });
   } catch (error) {
-    console.error('Error scraping ARC-AGI-1 leaderboard:', error.message);
-    throw error;
+    console.error('Error scraping ARC-AGI-1:', error);
+    return [];
   }
 }
 
 module.exports = arcAgi1Scraper;
-
-if (require.main === module) {
-  (async () => {
-    const numResults = process.argv[2] ? parseInt(process.argv[2], 10) : 10;
-    console.log(`Running ARC-AGI-1 scraper directly (top ${numResults})...`);
-    try {
-      const results = await arcAgi1Scraper(numResults);
-      console.log(`\n--- ARC-AGI-1 Scraper Results (Top ${numResults}) ---`);
-      results.forEach((item, index) => {
-        console.log(`${index + 1}. ${item.model} - ${item.score}`);
-      });
-      console.log("--------------------------------------------------\n");
-    } catch (error) {
-      console.error("Failed to run ARC-AGI-1 scraper directly:", error);
-    }
-  })();
-}
