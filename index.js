@@ -3,11 +3,10 @@ const fs = require('fs').promises;
 const path = require('path');
 const livebenchScraper = require('./src/scrapers/livebench');
 const simplebenchScraper = require('./src/scrapers/simplebench-scraper');
-const swebenchScraper = require('./src/scrapers/swebench-scraper');
-const aiderScraper = require('./src/scrapers/aider-scraper');
 const arcAgi1Scraper = require('./src/scrapers/arc-agi-1-scraper');
 const arcAgi2Scraper = require('./src/scrapers/arc-agi-2-scraper');
-const livecodebenchScraper = require('./src/scrapers/livecodebench-scraper');
+const artificialAnalysisScraper = require('./src/scrapers/artificial-analysis-scraper');
+const deepSWEScraper = require('./src/scrapers/deepswe-scraper');
 const OpenRouterClient = require('./src/openrouter');
 const { getComparisonPrompt } = require('./src/prompts');
 const { publishToNostr } = require('./src/nostr');
@@ -35,23 +34,21 @@ const nostrSecretKeyNsec = process.env.NOSTR_BOT_NSEC; // Use NOSTR_BOT_NSEC
 const actuallyPostIt = process.env.ACTUALLY_POST_IT === 'true'; // Check the debug flag
 
 function formatResultsForStorage(results) {
-  // Simple string formatting for storage and comparison
   let output = '';
   for (const key in results) {
     output += `=== ${key} ===\n`;
     results[key].forEach((model, i) => {
       let score = model.score;
-      // Attempt to format score consistently, handling different types
       if (typeof score === 'number') {
-         // Handle percentage formatting for SimpleBench and Aider
-         if (key === 'SimpleBench Leaderboard' || key === 'Aider Polyglot Leaderboard') {
+          if (key === 'ARC-AGI-1 Leaderboard' || key === 'ARC-AGI-2 Leaderboard' || 
+              key === 'Humanity Last Exam Leaderboard' || key === 'DeepSWE Leaderboard' ||
+              key === 'TerminalBench v2.1 Leaderboard' || key === 'CRIPt Leaderboard' || 
+              key === 'MMMU-Pro Leaderboard') {
              score = score.toFixed(1) + '%';
-         } else if (key === 'ARC-AGI-1 Leaderboard' || key === 'ARC-AGI-2 Leaderboard') {
-             score = score.toFixed(1) + '%';
-         } else if (key === 'LiveBench Leaderboard' || key === 'SWE-Bench Verified Leaderboard' || key === 'LiveCodeBench Leaderboard') {
+         } else if (key === 'LiveBench Leaderboard' || key === 'SimpleBench Leaderboard') {
+             score = typeof model.score === 'string' ? model.score : score.toFixed(1) + '%';
+         } else {
              score = score.toFixed(2);
-         } else { // Default for remaining leaderboards (if any added later)
-             score = score.toFixed(1);
          }
       }
       output += `${i + 1}. ${model.model} - ${score}\n`;
@@ -145,49 +142,69 @@ async function runAllScrapersAndMakePost() {
       }
     }
 
+    // Helper to add a delay before running scrapers to the same domain
+    async function runWithDelay(promiseFactory, delayMs) {
+      if (delayMs > 0) await new Promise(r => setTimeout(r, delayMs));
+      return promiseFactory().catch(e => { console.error(e); return []; });
+    }
+
     // 2. Run scrapers with individual timeouts
     const numResults = 20; // Define the number of results to fetch
-    const scraperPromises = [
+    
+    // Non-artificialanalysis scrapers (can run in parallel)
+    const otherScrapers = [
       withTimeout(livebenchScraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'LiveBench')
         .catch(e => { console.error("LiveBench Scraper failed:", e.message || e); return []; }),
       withTimeout(simplebenchScraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'SimpleBench')
         .catch(e => { console.error("SimpleBench Scraper failed:", e.message || e); return []; }),
-      withTimeout(swebenchScraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'SWebench')
-        .catch(e => { console.error("SWebench Scraper failed:", e.message || e); return []; }),
-      withTimeout(aiderScraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'Aider')
-        .catch(e => { console.error("Aider Scraper failed:", e.message || e); return []; }),
       withTimeout(arcAgi1Scraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'ARC-AGI-1')
         .catch(e => { console.error("ARC-AGI-1 Scraper failed:", e.message || e); return []; }),
       withTimeout(arcAgi2Scraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'ARC-AGI-2')
         .catch(e => { console.error("ARC-AGI-2 Scraper failed:", e.message || e); return []; }),
-      withTimeout(livecodebenchScraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'LiveCodeBench')
-        .catch(e => { console.error("LiveCodeBench Scraper failed:", e.message || e); return []; })
-    ].filter(Boolean); // Filter out any explicitly undefined promises if needed (though catch handles failures)
+      withTimeout(deepSWEScraper(browser, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'DeepSWE')
+        .catch(e => { console.error("DeepSWE Scraper failed:", e.message || e); return []; })
+    ];
 
-    const allResults = await Promise.all(scraperPromises);
+    // Artificialanalysis scrapers (sequential with delays to avoid rate limiting)
+    const aaDelay = 3000;
+    const [hleResults, tbv21Results, criptResults, mmmuProResults] = await Promise.all([
+      runWithDelay(() => 
+        withTimeout(artificialAnalysisScraper(browser, 'humanitys-last-exam', 32, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'HumanityLastExam'), 
+        0
+      ).catch(e => { console.error("Humanity Last Exam Scraper failed:", e.message || e); return []; }),
+      runWithDelay(() => 
+        withTimeout(artificialAnalysisScraper(browser, 'terminalbench-v2-1', 31, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'TerminalBenchV21'), 
+        aaDelay
+      ).catch(e => { console.error("TerminalBench v2.1 Scraper failed:", e.message || e); return []; }),
+      runWithDelay(() => 
+        withTimeout(artificialAnalysisScraper(browser, 'critpt', 32, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'CRIPt'), 
+        aaDelay * 2
+      ).catch(e => { console.error("CRIPt Scraper failed:", e.message || e); return []; }),
+      runWithDelay(() => 
+        withTimeout(artificialAnalysisScraper(browser, 'mmmu-pro', 32, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'MMMU-Pro'), 
+        aaDelay * 3
+      ).catch(e => { console.error("MMMU-Pro Scraper failed:", e.message || e); return []; })
+    ]);
 
-    // Check if all scraper results are empty
-    const allScrapersEmpty = allResults.every(resultArray => resultArray.length === 0);
+    const [lbResults, sbResults, arc1Results, arc2Results, deepSWEResults] = await Promise.all(otherScrapers);
+
+    const allScrapersEmpty = [lbResults, sbResults, arc1Results, arc2Results, hleResults, deepSWEResults, tbv21Results, criptResults, mmmuProResults].every(r => r.length === 0);
 
     if (allScrapersEmpty) {
         console.warn('All scrapers returned empty results. Skipping update of yesterdayScores.txt to preserve previous valid results.');
-        // Optionally, you might want to exit or skip further processing
-        return; // Exit the function early
+        return;
     }
-
-    const [lbResults, sbResults, swResults, aiderResults, arc1Results, arc2Results, lcbResults] = allResults; 
 
     const currentResults = {
         'LiveBench Leaderboard': lbResults,
         'SimpleBench Leaderboard': sbResults,
         'ARC-AGI-1 Leaderboard': arc1Results,
         'ARC-AGI-2 Leaderboard': arc2Results,
-        // Aider scraper disabled: benchmark data outdated (o3, Gemini 2.5)
-        // 'Aider Polyglot Leaderboard': aiderResults,
-        // SWE-Bench Verified scraper disabled: site structure changed
-        // 'SWE-Bench Verified Leaderboard': swResults,
-        // LiveCodeBench scraper disabled: data appears outdated
-        // 'LiveCodeBench Leaderboard': lcbResults 
+        'Humanity Last Exam Leaderboard': hleResults,
+        'DeepSWE Leaderboard': deepSWEResults,
+        'TerminalBench v2.1 Leaderboard': tbv21Results,
+        'CRIPt Leaderboard': criptResults,
+        'MMMU-Pro Leaderboard': mmmuProResults
     };
 
     const currentScores = formatResultsForStorage(currentResults);
