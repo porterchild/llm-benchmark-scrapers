@@ -17,8 +17,8 @@ async function livebenchScraper(browser, count = 10, navigationTimeout = 60000, 
         const cols = row.querySelectorAll('td');
         if (cols.length < 3) return null;
         
-        const model = cols[0].textContent.trim();
-        const score = cols[2].textContent.trim(); // Global Average is 3rd column
+        const model = cols[1].textContent.trim();
+        const score = cols[2].textContent.trim(); // Global Average is 3rd column (index 2)
         
         if (isNaN(parseFloat(score))) return null;
         

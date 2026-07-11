@@ -28,8 +28,8 @@ async function artificialAnalysisScraper(browser, evalSlug, svgIndex, topCount =
       const svg = svgs[idx];
       if (!svg) return [];
 
-      // Get model names from foreignObject elements containing links to /models/
-      const modelNames = Array.from(svg.querySelectorAll('foreignObject a[href*="/models/"]'))
+      // Get model names from links to /models/
+      const modelNames = Array.from(svg.querySelectorAll('a[href*="/models/"]'))
         .map(a => a.innerText.trim())
         .filter(name => name);
 

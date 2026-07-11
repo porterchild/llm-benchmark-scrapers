@@ -47,6 +47,34 @@ def parse_scores(filepath: Path) -> dict[str, list[str]]:
     return sections
 
 
+def is_valid_entry(line: str) -> bool:
+    """Check if a leaderboard entry has valid model name and score."""
+    if not line.strip():
+        return False
+    # Replacement character for undisplayed Unicode
+    if "\ufffd" in line:
+        return False
+    # Model names should be meaningful text, not just symbols
+    # Extract the model name (everything before " - ")
+    parts = line.split(" - ", 1)
+    if len(parts) < 2:
+        return False
+    model_name = parts[0].strip()
+    # Remove leading rank number and dot (e.g., "1. ")
+    import re
+    model_name = re.sub(r"^\d+\.\s*", "", model_name)
+    # Model name should have some alphabetic content
+    if not re.search(r"[a-zA-Z\u00C0-\u024F]", model_name):
+        return False
+    # Score should be a valid percentage
+    score = parts[1].strip()
+    if score in ("N/A", "", "0%"):
+        return False
+    if not re.search(r"[\d.]+\s*%", score):
+        return False
+    return True
+
+
 def find_failures(sections: dict[str, list[str]]) -> list[tuple[str, str]]:
     """Return list of (section_name, failure_reason) for any failures found."""
     failures = []
@@ -59,6 +87,13 @@ def find_failures(sections: dict[str, list[str]]) -> list[tuple[str, str]]:
         entries = [l for l in sections[section] if l.strip()]
         if not entries:
             failures.append((section, "empty (no model entries)"))
+            continue
+
+        invalid_entries = [e for e in entries if not is_valid_entry(e)]
+        if len(invalid_entries) == len(entries):
+            failures.append((section, "all entries corrupt (no valid model data)"))
+        elif len(invalid_entries) > len(entries) * 0.5:
+            failures.append((section, "majority of entries corrupt"))
 
     return failures
 
