@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Checks yesterdayScores.txt for scraper failures (empty leaderboards).
-If any failures are found, runs opencode to fix them per AGENTS.md.
+If any failures are found, runs pi to fix them per AGENTS.md.
 """
 
 import subprocess
@@ -11,7 +11,7 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent
 SCORES_FILE = PROJECT_DIR / "yesterdayScores.txt"
 AGENTS_FILE = PROJECT_DIR / "AGENTS.md"
-OPENCODE_CMD = "/home/piefast/.opencode/bin/opencode"
+PI_CMD = "/home/piefast/.nvm/versions/node/v24.18.0/bin/pi"
 
 # All active scraper sections that should appear in the file
 EXPECTED_SECTIONS = [
@@ -98,8 +98,8 @@ def find_failures(sections: dict[str, list[str]]) -> list[tuple[str, str]]:
     return failures
 
 
-def run_opencode_fix(failures: list[tuple[str, str]]) -> int:
-    """Run opencode with AGENTS.md instructions to fix the failures."""
+def run_pi_fix(failures: list[tuple[str, str]]) -> int:
+    """Run pi with AGENTS.md instructions to fix the failures."""
     section_list = ", ".join(name for name, _ in failures)
     message = (
         f"The scraper maintenance cron found failures in yesterdayScores.txt. "
@@ -109,12 +109,12 @@ def run_opencode_fix(failures: list[tuple[str, str]]) -> int:
 
     result = subprocess.run(
         [
-            OPENCODE_CMD,
-            "run",
+            PI_CMD,
+            "-p",
+            "--extension",
+            str(PROJECT_DIR / ".pi/extensions/stream-output.ts"),
+            "--stream=all",
             message,
-            "-m", "llamacpp4/default",
-            "--pure",
-            "--thinking",
         ],
         cwd=str(PROJECT_DIR),
         capture_output=False,
@@ -140,14 +140,14 @@ def main() -> int:
         print(f"  - {name}: {reason}")
     print()
 
-    print("Running opencode to fix...\n")
-    rc = run_opencode_fix(failures)
+    print("Running pi to fix...\n")
+    rc = run_pi_fix(failures)
     print()
 
     if rc == 0:
-        print("Opencode completed successfully.")
+        print("Pi completed successfully.")
     else:
-        print(f"Opencode exited with code {rc}.")
+        print(f"Pi exited with code {rc}.")
 
     return rc
 
