@@ -112,7 +112,7 @@ def run_pi_fix(failures: list[tuple[str, str]]) -> int:
             PI_CMD,
             "-p",
             "--extension",
-            str(PROJECT_DIR / ".pi/extensions/stream-output.ts"),
+            str(PROJECT_DIR / ".pi/extensions/stream-output/index.ts"),
             "--stream=all",
             message,
         ],
