@@ -169,19 +169,19 @@ async function runAllScrapersAndMakePost() {
     const aaDelay = 3000;
     const [hleResults, tbv21Results, criptResults, mmmuProResults] = await Promise.all([
       runWithDelay(() => 
-        withTimeout(artificialAnalysisScraper(browser, 'humanitys-last-exam', 32, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'HumanityLastExam'), 
+        withTimeout(artificialAnalysisScraper(browser, 'humanitys-last-exam', 33, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'HumanityLastExam'), 
         0
       ).catch(e => { console.error("Humanity Last Exam Scraper failed:", e.message || e); return []; }),
       runWithDelay(() => 
-        withTimeout(artificialAnalysisScraper(browser, 'terminalbench-v2-1', 31, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'TerminalBenchV21'), 
+        withTimeout(artificialAnalysisScraper(browser, 'terminalbench-v2-1', 32, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'TerminalBenchV21'), 
         aaDelay
       ).catch(e => { console.error("TerminalBench v2.1 Scraper failed:", e.message || e); return []; }),
       runWithDelay(() => 
-        withTimeout(artificialAnalysisScraper(browser, 'critpt', 32, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'CRIPt'), 
+        withTimeout(artificialAnalysisScraper(browser, 'critpt', 33, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'CRIPt'), 
         aaDelay * 2
       ).catch(e => { console.error("CRIPt Scraper failed:", e.message || e); return []; }),
       runWithDelay(() => 
-        withTimeout(artificialAnalysisScraper(browser, 'mmmu-pro', 32, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'MMMU-Pro'), 
+        withTimeout(artificialAnalysisScraper(browser, 'mmmu-pro', 33, numResults, SCRAPER_NAVIGATION_TIMEOUT_MS, SCRAPER_SELECTOR_TIMEOUT_MS), SCRAPER_TIMEOUT_MS, 'MMMU-Pro'), 
         aaDelay * 3
       ).catch(e => { console.error("MMMU-Pro Scraper failed:", e.message || e); return []; })
     ]);

@@ -12,3 +12,7 @@ When you are asked to do some maintenance on this tool, do the following:
 -update anything necessary
 -do a full index.js run to verify everything works as you expect. 
 -log what you did in changelog.md
+
+
+Other notes:
+Don't get all suspicious when you see model names that look like they're from the future. Your training cutoff is in the past, so by definition, everything is going to look like it's from the future to you. Just accept it, it's not a simulation.

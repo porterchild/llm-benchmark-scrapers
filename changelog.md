@@ -1,3 +1,6 @@
+Jul 22, 2026 - Fixed cron job PATH issue: updated crontab to use full path to node (`/home/user/.nvm/versions/node/v24.18.0/bin/node`) instead of relying on PATH, which was missing nvm bin directory. This was causing `/bin/sh: 1: node: not found` errors for daily cron runs.
+-All 9 scrapers verified working correctly. Data is consistent and commensurate across all benchmarks (GPT-5.6, Claude 4.x/5.x, Gemini 3.x at top).
+
 Jul 11, 2026 - Fixed LiveBench scraper: updated column index for model name from `cols[0]` to `cols[1]`. The LiveBench website added an expand icon column (▸) as the first column, shifting model names to column 1. 
 -Fixed maintenance detection in `ai_agent_maintenance.py` to check for replacement characters (U+FFFD), missing alphabetic content in model names, and invalid scores. All 9 scrapers verified working.
 
