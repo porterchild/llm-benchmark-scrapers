@@ -24,8 +24,50 @@ if (mightBeRaspberryPi) {
 
 const TIMEOUT_MULTIPLIER = mightBeRaspberryPi ? 10 : 1; // 10x timeout for Raspberry Pi, 1x for others
 
-const stateFilePath = path.join(__dirname, 'yesterdayScores.txt');
+const pastScoresDir = path.join(__dirname, 'pastScores');
 const SCRAPER_TIMEOUT_MS = 60000 * TIMEOUT_MULTIPLIER; // 60 seconds timeout for each scraper
+
+// Ensure pastScores directory exists
+async function ensurePastScoresDir() {
+  try {
+    await fs.access(pastScoresDir);
+  } catch {
+    await fs.mkdir(pastScoresDir, { recursive: true });
+  }
+}
+
+// Get the most recent scores file from pastScores/
+// Returns the file path, or null if none found
+async function getMostRecentScoresPath() {
+  try {
+    const files = await fs.readdir(pastScoresDir);
+    const scoreFiles = files.filter(f => f.endsWith('.txt')).sort().reverse();
+    if (scoreFiles.length > 0) {
+      return path.join(pastScoresDir, scoreFiles[0]);
+    }
+  } catch (error) {
+    console.log('No pastScores/ directory found or error reading it.');
+  }
+  return null;
+}
+
+// Get today's date string for filename
+function getTodayDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Save scores to pastScores/ with today's date
+async function saveScores(scores) {
+  const todayStr = getTodayDateString();
+  const filePath = path.join(pastScoresDir, `${todayStr}.txt`);
+  await fs.writeFile(filePath, scores, 'utf-8');
+  console.log(`Saved scores to pastScores/${todayStr}.txt`);
+}
+
 const SCRAPER_NAVIGATION_TIMEOUT_MS = 60000 * TIMEOUT_MULTIPLIER; // 60 seconds navigation timeout for puppeteer
 const SCRAPER_SELECTOR_TIMEOUT_MS = 30000 * TIMEOUT_MULTIPLIER; // 30 seconds selector timeout for puppeteer
 
@@ -184,18 +226,17 @@ async function runAllScrapersAndMakePost() {
       }
     }
 
-    // 1. Read previous scores
+    // Ensure pastScores directory exists
+    await ensurePastScoresDir();
+
+    // 1. Read most recent previous scores from pastScores/
     let previousScores = '';
-    try {
-      previousScores = await fs.readFile(stateFilePath, 'utf-8');
-      console.log('Loaded previous scores from yesterdayScores.txt');
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        console.log('yesterdayScores.txt not found. Assuming first run.');
-      } else {
-        console.error('Error reading previous scores:', error);
-        // Decide if we should proceed or exit
-      }
+    const mostRecentPath = await getMostRecentScoresPath();
+    if (mostRecentPath) {
+      previousScores = await fs.readFile(mostRecentPath, 'utf-8');
+      console.log(`Loaded previous scores from pastScores/${path.basename(mostRecentPath)}`);
+    } else {
+      console.log('No previous scores found. Assuming first run.');
     }
 
     // Helper to add a delay before running scrapers to the same domain
@@ -247,7 +288,7 @@ async function runAllScrapersAndMakePost() {
     const allScrapersEmpty = [lbResults, sbResults, arc1Results, arc2Results, hleResults, deepSWEResults, tbv21Results, criptResults, mmmuProResults].every(r => r.length === 0);
 
     if (allScrapersEmpty) {
-        console.warn('All scrapers returned empty results. Skipping update of yesterdayScores.txt to preserve previous valid results.');
+        console.warn('All scrapers returned empty results. Skipping score update to preserve previous valid results.');
         return;
     }
 
@@ -312,13 +353,12 @@ async function runAllScrapersAndMakePost() {
         }
     }
 
-    // 5. Overwrite yesterdayScores.txt with new results
+    // 5. Save scores to pastScores/ (dated)
     // The check for allScrapersEmpty above ensures we don't reach here if results were empty.
     try {
-        await fs.writeFile(stateFilePath, currentScores, 'utf-8');
-        console.log('Successfully updated yesterdayScores.txt');
+        await saveScores(currentScores);
     } catch (error) {
-        console.error('Error writing scores to file:', error);
+        console.error('Error saving scores:', error);
     }
 
 

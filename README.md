@@ -1,6 +1,6 @@
 # LLM Benchmark Nostr Bot
 
-This project runs daily scrapers to monitor various LLM benchmark leaderboards (like Hugging Face Chatbot Arena, LiveBench, SimpleBench, SWebench). It compares the latest results with the previous day's data stored in `yesterdayScores.txt`. If any changes are detected, it generates a summary of the changes using an LLM via OpenRouter and (placeholder) publishes the update as a Nostr note.
+This project runs daily scrapers to monitor various LLM benchmark leaderboards (like Hugging Face Chatbot Arena, LiveBench, SimpleBench, SWebench). It compares the latest results with the most recent scores stored in `pastScores/`. Scores are stored as one file per day (`YYYY-MM-DD.txt`). The assumption is that the cron job runs at most once daily. If any changes are detected, it generates a summary of the changes using an LLM via OpenRouter and (placeholder) publishes the update as a Nostr note.
 
 ## Installation
 
