@@ -73,6 +73,62 @@ function withTimeout(promise, ms, scraperName) {
   ]);
 }
 
+// Parse scores file into { leaderboardName: [entries], ... }
+function parseScoresFile(content) {
+  const sections = {};
+  let currentSection = null;
+
+  if (!content) return sections;
+
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('=== ') && trimmed.endsWith(' ===')) {
+      currentSection = trimmed.slice(4, -4);
+      sections[currentSection] = [];
+    } else if (currentSection && trimmed) {
+      sections[currentSection].push(trimmed);
+    }
+  }
+
+  return sections;
+}
+
+// Compare two leaderboards and return true if they differ
+function leaderboardsChanged(prevEntries, currEntries) {
+  if (!prevEntries || !currEntries) return true;
+  if (prevEntries.length !== currEntries.length) return true;
+  
+  for (let i = 0; i < prevEntries.length; i++) {
+    if (prevEntries[i] !== currEntries[i]) return true;
+  }
+  return false;
+}
+
+// Find which leaderboards have changed
+function findChangedLeaderboards(prevScores, currScores) {
+  const prev = parseScoresFile(prevScores);
+  const curr = parseScoresFile(currScores);
+  const changed = [];
+
+  // Check all leaderboards that exist in current results
+  for (const name in curr) {
+    if (leaderboardsChanged(prev[name], curr[name])) {
+      changed.push(name);
+    }
+  }
+
+  // Also check if any leaderboards are new (not in prev)
+  for (const name in curr) {
+    if (!prev[name] || prev[name].length === 0) {
+      if (!changed.includes(name)) {
+        changed.push(name);
+      }
+    }
+  }
+
+  return changed;
+}
+
 
 const http = require('http'); // Import http module for network check
 
@@ -221,20 +277,25 @@ async function runAllScrapersAndMakePost() {
         if (!openRouter.apiKey) missingKeys.push("OPENROUTER_API_KEY");
         if (!nostrSecretKeyNsec) missingKeys.push("NOSTR_BOT_NSEC");
         console.warn(`Missing environment variable(s): ${missingKeys.join(', ')}. Skipping comparison and Nostr post generation.`);
-    } else if (currentScores === previousScores) {
-        console.log("No changes detected since last run.");
     } else {
-        console.log("Changes detected or first run. Generating summary post...");
+        // Check per-leaderboard changes
+        const changedLeaderboards = findChangedLeaderboards(previousScores, currentScores);
         let postContent = '';
-        try {
-            const prompt = getComparisonPrompt(previousScores, currentScores);
-            postContent = await openRouter.runPrompt(prompt);
-            console.log("\n--- Generated Nostr Post ---");
-            console.log(postContent);
-            console.log("--------------------------\n");
-        } catch (error) {
-            console.error("Failed to generate summary post with OpenRouter:", error);
-            // Optionally decide if you want to proceed without a post or exit
+        
+        if (changedLeaderboards.length === 0) {
+            console.log("No changes detected since last run.");
+        } else {
+            console.log(`Changes detected in: ${changedLeaderboards.join(', ')}. Generating summary post...`);
+            try {
+                const prompt = getComparisonPrompt(previousScores, currentScores, changedLeaderboards);
+                postContent = await openRouter.runPrompt(prompt);
+                console.log("\n--- Generated Nostr Post ---");
+                console.log(postContent);
+                console.log("--------------------------\n");
+            } catch (error) {
+                console.error("Failed to generate summary post with OpenRouter:", error);
+                // Optionally decide if you want to proceed without a post or exit
+            }
         }
 
         // 4. Publish to Nostr if post content was generated and flag is set

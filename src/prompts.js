@@ -2,13 +2,24 @@
  * Generates the prompt for comparing LLM benchmark scores.
  * @param {string} previousScores - Stringified representation of the previous day's scores.
  * @param {string} currentScores - Stringified representation of the current day's scores.
+ * @param {string[]} changedLeaderboards - List of leaderboards that have changes (optional).
  * @returns {string} - The formatted prompt string.
  */
-function getComparisonPrompt(previousScores, currentScores) {
+function getComparisonPrompt(previousScores, currentScores, changedLeaderboards = null) {
   // Handle the case where previousScores might be empty (first run)
   const previousScoresSection = previousScores
     ? `Previous day's LLM benchmark scores:\n---\n${previousScores}\n---`
     : "This is the first run, no previous scores available.";
+
+  let changedInfo = '';
+  if (changedLeaderboards && changedLeaderboards.length > 0) {
+    changedInfo = `
+**LEADERBOARDS WITH CHANGES:** ${changedLeaderboards.join(', ')}
+Focus on these leaderboards for your summary.
+`;
+  } else if (!previousScores) {
+    changedInfo = '\n**This is the first run - all leaderboards are new.**\n';
+  }
 
   return `
 ${previousScoresSection}
@@ -17,11 +28,13 @@ Current day's LLM benchmark scores:
 ---
 ${currentScores}
 ---
-
+${changedInfo}
 Analyze the changes between the previous and new (current) scores. Generate a concise summary highlighting any movements (e.g., new models entering the top ranks, score changes, rank shifts). It should take the form of a short, friendly social media post.
 For any leaderboard that has any changes, reproduce ALL new standings for that leaderboard. If there are no previous results for a given leaderboard, do the same. If there are no prevous results for any leaderboards (which will happen on the first post), reproduce ALL new standings in the post.
 If there are no changes detected between the previous and current scores for a given leaderboard, skip it.
 If the new (current) results are empty for a leaderboard, skip that leaderboard.
+
+CRITICAL: The LEADERBOARDS WITH CHANGES list above is definitive. You MUST include changes for every leaderboard listed there. Do not say "no changes" if a leaderboard is listed as having changes.
 
 **Formatting Requirements:**
 At the end of the post, include #ai and #LLM, plus a hashtag for each leaderboard that had changes (e.g., #SimpleBench, #LiveBench).
